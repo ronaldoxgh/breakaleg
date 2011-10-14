@@ -1,0 +1,10 @@
+
+/TestResults
+/BreakalegConsole/obj
+/BreakalegConsole/bin
+/BreakalegCore/bin
+/BreakalegCore/obj
+/BreakalegTests/bin
+/BreakalegTests/obj
+/Local.testsettings
+*.testsettings
