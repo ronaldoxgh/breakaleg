@@ -40,9 +40,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="BlegModels.cs" />
-    <Compile Include="BlegCompilers.cs" />
-    <Compile Include="BlegReaders.cs" />
+    <Compile Include="Models.cs" />
+    <Compile Include="Compilers.cs" />
+    <Compile Include="Readers.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

@@ -1,16 +1,19 @@
-﻿using System;
+﻿///TODO ternary conditional op "?:"
+///TODO for...in...
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-using Breakaleg.Readers;
-using Breakaleg.Models;
+using Breakaleg.Core.Readers;
+using Breakaleg.Core.Models;
 
-namespace Breakaleg.Compilers
+namespace Breakaleg.Core.Compilers
 {
-    class JavaScriptStringReader : StringReader
+    class JavaScriptReader : StringReader
     {
-        public JavaScriptStringReader(string code) : base(code) { }
+        public JavaScriptReader(string code) : base(code) { }
         public override bool Comments()
         {
             return LineComment() || BlockComment();
@@ -64,7 +67,7 @@ namespace Breakaleg.Compilers
 
         public CodePiece Parse(string code)
         {
-            var p = new JavaScriptStringReader(code);
+            var p = new JavaScriptReader(code);
             var block = new CodeBlock();
             ReadCodes(p, ref block);
             return block;
@@ -109,7 +112,7 @@ namespace Breakaleg.Compilers
         private bool ReadCode(StringReader p, ref CodeBlock block)
         {
             var lret = ReadBlock(p, ref block) || ReadIf(p, ref block) || ReadWhile(p, ref block) ||
-                ReadDo(p, ref block) || ReadFunction(p, ref block, true) || ReadDelete(p, ref block) || ReadTry(p, ref block) ||
+                ReadDo(p, ref block) || ReadFunctionDecl(p, ref block) || ReadDelete(p, ref block) || ReadTry(p, ref block) ||
                 ReadVar(p, ref block) || ReadFor(p, ref block) || ReadSwitch(p, ref block) || ReadBreak(p, ref block) ||
                 ReadReturn(p, ref block) || ReadContinue(p, ref block) || ReadCall(p, ref block);
             if (lret)
@@ -173,7 +176,7 @@ namespace Breakaleg.Compilers
                     Expect(p.ThisText("}"));
                     finallyCount++;
                 }
-                Expect(catchCount > 0 || finallyCount == 1);
+                Expect(catchCount > 0 || finallyCount > 0);
                 AddCode(ref block, jstry);
                 return true;
             }
@@ -245,10 +248,10 @@ namespace Breakaleg.Compilers
             return false;
         }
 
-        private bool ReadFunction(StringReader p, ref CodeBlock block, bool reqName)
+        private bool ReadFunctionDecl(StringReader p, ref CodeBlock block)
         {
             FunctionCode funcRead;
-            if (ReadFunctionBody(p, out funcRead, reqName))
+            if (ReadFunctionBody(p, true, out funcRead))
             {
                 AddCode(ref block, funcRead, true);
                 return true;
@@ -256,7 +259,7 @@ namespace Breakaleg.Compilers
             return false;
         }
 
-        private bool ReadFunctionBody(StringReader p, out FunctionCode func, bool reqName)
+        private bool ReadFunctionBody(StringReader p, bool reqName, out FunctionCode func)
         {
             var saved = p.Position;
             if (p.ThisWord("function"))
@@ -266,25 +269,17 @@ namespace Breakaleg.Compilers
                 // reqName diferencia esses dois usos, um tem nome o outro nao
                 // ex.: function X(){} ou function(){}
                 if (reqName)
-                {
                     Expect(ReadIdent(p, out jsfn.Name));
-                    Expect(p.ThisText("("));
-                }
-                else if (!p.ThisText("("))
-                {
-                    p.Position = saved;
-                    func = null;
-                    return false;
-                }
+                Expect(p.ThisText("("));
+                var plist = new List<string>();
                 string pn;
                 while (ReadIdent(p, out pn))
                 {
-                    if (jsfn.Params == null)
-                        jsfn.Params = new List<string>();
-                    jsfn.Params.Add(pn);
+                    plist.Add(pn);
                     if (!p.ThisText(","))
                         break;
                 }
+                jsfn.Params = plist.Count > 0 ? plist.ToArray() : null;
                 Expect(p.ThisText(")"));
                 Expect(p.ThisText("{"));
                 ReadCodes(p, ref jsfn.Code);
@@ -292,6 +287,48 @@ namespace Breakaleg.Compilers
                 func = jsfn;
                 return true;
             }
+            func = null;
+            return false;
+        }
+
+        private bool ReadClosure(StringReader p, out FunctionCode func)
+        {
+            var saved = p.Position;
+            var plist = new List<string>();
+            string pn;
+            if (p.ThisText("("))
+            {
+                while (ReadIdent(p, out pn))
+                {
+                    plist.Add(pn);
+                    if (!p.ThisText(","))
+                        break;
+                }
+                if (!p.ThisText(")"))
+                    goto Mistaken;
+            }
+            else if (ReadIdent(p, out pn))
+                plist.Add(pn);
+            if (p.ThisText(":"))
+            {
+                var jsfn = new FunctionCode();
+                jsfn.Params = plist.Count > 0 ? plist.ToArray() : null;
+                if (p.ThisText("{"))
+                {
+                    ReadCodes(p, ref jsfn.Code);
+                    Expect(p.ThisText("}"));
+                }
+                else
+                {
+                    ExprPiece arg;
+                    Expect(ReadValue(p, out arg));
+                    AddCode(ref jsfn.Code, new BreakCode { Kind = BreakCode.TKind.Return, Arg = arg });
+                }
+                func = jsfn;
+                return true;
+            }
+        Mistaken:
+            p.Position = saved;
             func = null;
             return false;
         }
@@ -699,10 +736,10 @@ namespace Breakaleg.Compilers
 
         private bool ReadFunctionValue(StringReader p, out ExprPiece value)
         {
-            FunctionCode func = null;
-            if (ReadFunctionBody(p, out func, false))
+            FunctionCode funcRead;
+            if (ReadFunctionBody(p, false, out funcRead) || ReadClosure(p, out funcRead))
             {
-                value = new FunctionExpr { Function = func };
+                value = new FunctionExpr { Function = funcRead };
                 return true;
             }
             value = null;

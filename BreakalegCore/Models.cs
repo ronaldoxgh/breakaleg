@@ -6,7 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Reflection;
 
-namespace Breakaleg.Models
+namespace Breakaleg.Core.Models
 {
     public abstract class DynamicRecord
     {
@@ -357,7 +357,7 @@ namespace Breakaleg.Models
     public class FunctionCode : CodePiece
     {
         public string Name;
-        public List<string> Params;
+        public string[] Params;
         public CodeBlock Code;
 
         public override ExitState Run(Context context)
@@ -371,7 +371,7 @@ namespace Breakaleg.Models
             // nesse callContext serao guardados os parametros e o simbolo this=owner
             var callContext = context.NewChild();
             if (Params != null)
-                for (var i = 0; i < Params.Count; i++)
+                for (var i = 0; i < Params.Length; i++)
                     callContext.SetMember(Params[i], args != null && i < args.Length ? args[i] : null);
             if (owner != null)
                 callContext.SetMember("this", owner);

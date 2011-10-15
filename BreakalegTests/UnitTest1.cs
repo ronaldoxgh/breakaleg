@@ -5,8 +5,8 @@ using System.Linq;
 
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-using Breakaleg.Compilers;
-using Breakaleg.Models;
+using Breakaleg.Core.Compilers;
+using Breakaleg.Core.Models;
 
 namespace Breakaleg.Tests
 {
@@ -268,6 +268,11 @@ namespace Breakaleg.Tests
             {
                 Console.WriteLine(s);
             }
+
+            public dynamic Soma(dynamic p1, dynamic p2)
+            {
+                return p1 + p2;
+            }
         }
 
         [TestMethod]
@@ -276,11 +281,31 @@ namespace Breakaleg.Tests
             var code = @"
                 r=a+b*3;
                 alert(r);
+                x=Soma(4,5);
                 ";
             var ctx = new Context();
             ctx.AddNamespace(new JSNS { a = 10, b = 30 });
             var ret = BreakalegCompiler.Run(code, "r", ctx);
             Assert.AreEqual(100, ret);
+            ret = BreakalegCompiler.Run(code, "x", ctx);
+            Assert.AreEqual(9, ret);
+        }
+
+        [TestMethod]
+        public void TestMethod_Closures()
+        {
+            /*
+            a:1+2;
+            a:=1+2;
+            :{1+2};
+            :1;
+            */
+
+            Assert.AreEqual(14, BreakalegCompiler.Run("f=a:7*a; r=f(2)", "r", new Context()));
+            Assert.AreEqual(6, BreakalegCompiler.Run("var f=(a,b):a*b; r=f(2,3)", "r", new Context()));
+            Assert.AreEqual(545, BreakalegCompiler.Run("r=(a:543+a)(2)", "r", new Context()));
+            Assert.AreEqual(24, BreakalegCompiler.Run("f=a:{return 8*a}; r=f(3)", "r", new Context()));
+            Assert.AreEqual(40, BreakalegCompiler.Run("f=:8*5; r=f()", "r", new Context()));
         }
     }
 }

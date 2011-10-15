@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace Breakaleg.Readers
+namespace Breakaleg.Core.Readers
 {
     public class TextPosition
     {
@@ -21,7 +21,7 @@ namespace Breakaleg.Readers
     ///TODO case-sensitiveness
     public class StringReader
     {
-        public const string AlphaCharSet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_";
+        public const string AlphaCharSet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_$";
         public const string DigitCharSet = "0123456789";
         public const string AlphaCharSetEx = AlphaCharSet + DigitCharSet;
         public const string SpaceCharSet = "\x0d\x0a\x20\x09\x1a";

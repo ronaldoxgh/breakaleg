@@ -4,8 +4,8 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 
-using Breakaleg.Models;
-using Breakaleg.Compilers;
+using Breakaleg.Core.Models;
+using Breakaleg.Core.Compilers;
 
 namespace Breakaleg.Consoles
 {
@@ -15,7 +15,7 @@ namespace Breakaleg.Consoles
         {
             CodePiece c = null;
             var p = new BreakalegCompiler();
-            
+
             Thread.Sleep(1000);
 
             var h0 = DateTime.Now;
