@@ -21,9 +21,9 @@ namespace Breakaleg.Tests
 
         dynamic Run(string code, string ret)
         {
-            var p = new BreakalegCompiler();
+            var p = new JSCompiler();
             var c = p.Parse(code);
-            var ctx = new Context();
+            var ctx = new NameContext();
             c.Run(ctx);
             if (ret != null)
             {
@@ -283,11 +283,11 @@ namespace Breakaleg.Tests
                 alert(r);
                 x=Soma(4,5);
                 ";
-            var ctx = new Context();
+            var ctx = new NameContext();
             ctx.AddNamespace(new JSNS { a = 10, b = 30 });
-            var ret = BreakalegCompiler.Run(code, "r", ctx);
+            var ret = JSCompiler.Run(code, "r", ctx);
             Assert.AreEqual(100, ret);
-            ret = BreakalegCompiler.Run(code, "x", ctx);
+            ret = JSCompiler.Run(code, "x", ctx);
             Assert.AreEqual(9, ret);
         }
 
@@ -301,11 +301,11 @@ namespace Breakaleg.Tests
             :1;
             */
 
-            Assert.AreEqual(14, BreakalegCompiler.Run("f=a:7*a; r=f(2)", "r", new Context()));
-            Assert.AreEqual(6, BreakalegCompiler.Run("var f=(a,b):a*b; r=f(2,3)", "r", new Context()));
-            Assert.AreEqual(545, BreakalegCompiler.Run("r=(a:543+a)(2)", "r", new Context()));
-            Assert.AreEqual(24, BreakalegCompiler.Run("f=a:{return 8*a}; r=f(3)", "r", new Context()));
-            Assert.AreEqual(40, BreakalegCompiler.Run("f=:8*5; r=f()", "r", new Context()));
+            Assert.AreEqual(14, JSCompiler.Run("f=a:7*a; r=f(2)", "r", new NameContext()));
+            Assert.AreEqual(6, JSCompiler.Run("var f=(a,b):a*b; r=f(2,3)", "r", new NameContext()));
+            Assert.AreEqual(545, JSCompiler.Run("r=(a:543+a)(2)", "r", new NameContext()));
+            Assert.AreEqual(24, JSCompiler.Run("f=a:{return 8*a}; r=f(3)", "r", new NameContext()));
+            Assert.AreEqual(40, JSCompiler.Run("f=:8*5; r=f()", "r", new NameContext()));
         }
 
         [TestMethod]
@@ -318,7 +318,7 @@ namespace Breakaleg.Tests
             obj.lastName='nash';
             r=obj.getFullName();
             ";
-            Assert.AreEqual("john nash", BreakalegCompiler.Run(code, "r", new Context()));
+            Assert.AreEqual("john nash", JSCompiler.Run(code, "r", new NameContext()));
         }
 
         [TestMethod]
@@ -336,9 +336,9 @@ namespace Breakaleg.Tests
                 var p2=new Person();
                 x=p2.What();
                 ";
-            Assert.AreEqual("zacaro", BreakalegCompiler.Run(code, "n", new Context()));
-            Assert.AreEqual(123, BreakalegCompiler.Run(code, "a", new Context()));
-            Assert.AreEqual(34, BreakalegCompiler.Run(code, "x", new Context()));
+            Assert.AreEqual("zacaro", JSCompiler.Run(code, "n", new NameContext()));
+            Assert.AreEqual(123, JSCompiler.Run(code, "a", new NameContext()));
+            Assert.AreEqual(34, JSCompiler.Run(code, "x", new NameContext()));
         }
     }
 }

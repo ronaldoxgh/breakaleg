@@ -63,11 +63,6 @@ namespace Breakaleg.Core.Models
             return insts;
         }
 
-        public class Coisa
-        {
-            public int ccc;
-        }
-
         protected bool SetObjectMember(object obj, string name, Instance inst)
         {
             Type objType;
@@ -93,9 +88,6 @@ namespace Breakaleg.Core.Models
 
         protected Instance GetObjectMember(object obj, string name)
         {
-            if (name == "innerHTML")
-                name += "";///x
-
             Type objType;
             if (obj is ExternalClass)
                 objType = (obj as ExternalClass).TypeRef;
@@ -119,13 +111,13 @@ namespace Breakaleg.Core.Models
         }
     }
 
-    public class Context : DynamicRecord
+    public class NameContext : DynamicRecord
     {
-        public Context ParentContext;
+        public NameContext ParentContext;
 
-        public Context NewChild()
+        public NameContext NewChild()
         {
-            return new Context { ParentContext = this };
+            return new NameContext { ParentContext = this };
         }
 
         protected List<object> namespaces;
@@ -157,7 +149,7 @@ namespace Breakaleg.Core.Models
     public class Instance : DynamicRecord
     {
         public dynamic ScalarValue;
-        public Context Context;
+        public NameContext Context;
 
         public override string ToString()
         {
@@ -166,9 +158,6 @@ namespace Breakaleg.Core.Models
 
         public override Instance GetMember(object name)
         {
-            if (name == "innerHTML")
-                name += "";///x
-
             var member = base.GetMember(name);
             if (member == null && name is string && ScalarValue != null)
                 member = GetObjectMember(ScalarValue, (string)name);
@@ -185,7 +174,7 @@ namespace Breakaleg.Core.Models
     }
 
     public enum ExitMode { Normal, Break, Return, Continue, Except }
-    public class ExitState
+    public class ExitResult
     {
         public ExitMode ExitMode;
         public Instance ExitValue;
@@ -193,14 +182,14 @@ namespace Breakaleg.Core.Models
 
     public abstract class CodePiece
     {
-        public abstract ExitState Run(Context context);
+        public abstract ExitResult Run(NameContext context);
     }
 
     public class CodeBlock : CodePiece
     {
         public List<CodePiece> Codes;
 
-        public override ExitState Run(Context context)
+        public override ExitResult Run(NameContext context)
         {
             if (Codes == null || Codes.Count == 0)
                 return null;
@@ -220,7 +209,7 @@ namespace Breakaleg.Core.Models
         public CodeBlock Then;
         public CodeBlock Else;
 
-        public override ExitState Run(Context context)
+        public override ExitResult Run(NameContext context)
         {
             if (Condition.EvalBool(context))
                 return Then != null ? Then.Run(context.NewChild()) : null;
@@ -234,9 +223,9 @@ namespace Breakaleg.Core.Models
         public ExprPiece Condition;
         public CodeBlock Code;
 
-        public override ExitState Run(Context context)
+        public override ExitResult Run(NameContext context)
         {
-            Context codeContext = null;
+            NameContext codeContext = null;
             while (Condition.EvalBool(context))
                 if (Code != null)
                 {
@@ -261,9 +250,9 @@ namespace Breakaleg.Core.Models
         public ExprPiece Condition;
         public CodeBlock Code;
 
-        public override ExitState Run(Context context)
+        public override ExitResult Run(NameContext context)
         {
-            Context codeContext = null;
+            NameContext codeContext = null;
             do
             {
                 if (Code != null)
@@ -287,24 +276,37 @@ namespace Breakaleg.Core.Models
 
     public class BreakCode : CodePiece
     {
-        public enum TKind { Break, Continue, Return, Throw }
-        public TKind Kind;
+        public override ExitResult Run(NameContext context)
+        {
+            return new ExitResult { ExitMode = ExitMode.Break };
+        }
+    }
+
+    public class ContinueCode : CodePiece
+    {
+        public override ExitResult Run(NameContext context)
+        {
+            return new ExitResult { ExitMode = ExitMode.Continue };
+        }
+    }
+
+    public class ReturnCode : CodePiece
+    {
         public ExprPiece Arg;
 
-        public override ExitState Run(Context context)
+        public override ExitResult Run(NameContext context)
         {
-            switch (Kind)
-            {
-                case TKind.Break:
-                    return new ExitState { ExitMode = ExitMode.Break };
-                case TKind.Continue:
-                    return new ExitState { ExitMode = ExitMode.Continue };
-                case TKind.Return:
-                    return new ExitState { ExitMode = ExitMode.Return, ExitValue = Arg != null ? Arg.Eval(context) : null };
-                case TKind.Throw:
-                    return new ExitState { ExitMode = ExitMode.Except, ExitValue = Arg != null ? Arg.Eval(context) : null };
-            }
-            return null;
+            return new ExitResult { ExitMode = ExitMode.Return, ExitValue = Arg != null ? Arg.Eval(context) : null };
+        }
+    }
+
+    public class ThrowCode : CodePiece
+    {
+        public ExprPiece Arg;
+
+        public override ExitResult Run(NameContext context)
+        {
+            return new ExitResult { ExitMode = ExitMode.Except, ExitValue = Arg != null ? Arg.Eval(context) : null };
         }
     }
 
@@ -315,10 +317,10 @@ namespace Breakaleg.Core.Models
         public CodePiece Increment;
         public CodeBlock Code;
 
-        public override ExitState Run(Context context)
+        public override ExitResult Run(NameContext context)
         {
             var loopContext = context.NewChild();
-            Context codeContext = null;
+            NameContext codeContext = null;
             if (Initialization != null)
                 Initialization.Run(loopContext);
             while (Condition == null || Condition.EvalBool(loopContext))
@@ -351,10 +353,10 @@ namespace Breakaleg.Core.Models
         public ExprPiece SetExpr;
         public CodeBlock Code;
 
-        public override ExitState Run(Context context)
+        public override ExitResult Run(NameContext context)
         {
             var loopContext = context.NewChild();
-            Context codeContext = null;
+            NameContext codeContext = null;
             var setInst = SetExpr.Eval(context);
             var vals = setInst.GetInstanceList();
             if (vals != null)
@@ -381,7 +383,7 @@ namespace Breakaleg.Core.Models
     {
         public ExprPiece Arg;
 
-        public override ExitState Run(Context context)
+        public override ExitResult Run(NameContext context)
         {
             Arg.Eval(context);
             return null;
@@ -395,7 +397,7 @@ namespace Breakaleg.Core.Models
         public CodeBlock Catch;
         public string CatchName;
 
-        public override ExitState Run(Context context)
+        public override ExitResult Run(NameContext context)
         {
             var result = Code.Run(context.NewChild());
             if (result != null && result.ExitMode == ExitMode.Except)
@@ -422,7 +424,7 @@ namespace Breakaleg.Core.Models
         public List<SwitchCaseCode> Cases;
         public CodeBlock Default;
 
-        public override ExitState Run(Context context)
+        public override ExitResult Run(NameContext context)
         {
             var switchContext = context.NewChild();
             var argInst = Arg.Eval(switchContext);
@@ -452,13 +454,13 @@ namespace Breakaleg.Core.Models
         public ExprPiece Test;
         public CodeBlock Code;
 
-        public bool Match(Context context, Instance switchValue)
+        public bool Match(NameContext context, Instance switchValue)
         {
             var caseValue = Test.Eval(context);
             return caseValue.ScalarValue == switchValue.ScalarValue;
         }
 
-        public override ExitState Run(Context context)
+        public override ExitResult Run(NameContext context)
         {
             if (Code != null)
                 return Code.Run(context);
@@ -471,7 +473,7 @@ namespace Breakaleg.Core.Models
         public string Name;
         public ExprPiece Value;
 
-        public override ExitState Run(Context context)
+        public override ExitResult Run(NameContext context)
         {
             context.SetMember(this.Name, Value != null ? Value.Eval(context) : null);
             return null;
@@ -484,7 +486,7 @@ namespace Breakaleg.Core.Models
         public string[] Params;
         public CodeBlock Code;
 
-        public override ExitState Run(Context context)
+        public override ExitResult Run(NameContext context)
         {
             var selfInst = new Instance { ScalarValue = this, Context = context };
             selfInst.SetMember("prototype", new Instance());
@@ -494,7 +496,7 @@ namespace Breakaleg.Core.Models
             return null;
         }
 
-        public virtual ExitState Call(Context context, Instance owner, Instance[] args)
+        public virtual ExitResult Call(NameContext context, Instance owner, Instance[] args)
         {
             // nesse callContext serao guardados os parametros e o simbolo this=owner
             var callContext = context.NewChild();
@@ -517,8 +519,8 @@ namespace Breakaleg.Core.Models
             this.method = method;
         }
 
-        public override ExitState Run(Context context) { return null; }
-        public override ExitState Call(Context context, Instance owner, Instance[] args)
+        public override ExitResult Run(NameContext context) { return null; }
+        public override ExitResult Call(NameContext context, Instance owner, Instance[] args)
         {
             object[] argvals = null;
             if (args != null)
@@ -528,7 +530,7 @@ namespace Breakaleg.Core.Models
                     argvals[i] = args[i].ScalarValue;
             }
             var ret = method.Invoke(target, argvals);
-            return new ExitState { ExitMode = ExitMode.Normal, ExitValue = new Instance { ScalarValue = ret } };
+            return new ExitResult { ExitMode = ExitMode.Normal, ExitValue = new Instance { ScalarValue = ret } };
         }
     }
 
@@ -540,8 +542,8 @@ namespace Breakaleg.Core.Models
             this.TypeRef = typeRef;
         }
 
-        public override ExitState Run(Context context) { return null; }
-        public override ExitState Call(Context context, Instance owner, Instance[] args)
+        public override ExitResult Run(NameContext context) { return null; }
+        public override ExitResult Call(NameContext context, Instance owner, Instance[] args)
         {
             object[] argvals = null;
             if (args != null)
@@ -551,7 +553,7 @@ namespace Breakaleg.Core.Models
                     argvals[i] = args[i].ScalarValue;
             }
             var ret = Activator.CreateInstance(TypeRef, argvals, null);
-            return new ExitState { ExitMode = ExitMode.Normal, ExitValue = new Instance { ScalarValue = ret } };
+            return new ExitResult { ExitMode = ExitMode.Normal, ExitValue = new Instance { ScalarValue = ret } };
         }
     }
 
@@ -559,7 +561,7 @@ namespace Breakaleg.Core.Models
     {
         public ExprPiece ObjectRef;
 
-        public override ExitState Run(Context context)
+        public override ExitResult Run(NameContext context)
         {
             if (ObjectRef is DotExpr)
             {
@@ -593,7 +595,7 @@ namespace Breakaleg.Core.Models
         protected bool callable = false;
         public bool IsCallable { get { return callable; } }
 
-        public dynamic EvalScalar(Context context)
+        public dynamic EvalScalar(NameContext context)
         {
             var inst = Eval(context);
             if (inst != null)
@@ -601,7 +603,7 @@ namespace Breakaleg.Core.Models
             return null;
         }
 
-        public bool EvalBool(Context context)
+        public bool EvalBool(NameContext context)
         {
             var inst = Eval(context);
             if (inst == null)
@@ -617,14 +619,14 @@ namespace Breakaleg.Core.Models
             return v;
         }
 
-        public abstract Instance Eval(Context context);
-        public virtual void Update(Context context, Instance inst) { throw new Exception("leftside is readonly"); }
+        public abstract Instance Eval(NameContext context);
+        public virtual void Update(NameContext context, Instance inst) { throw new Exception("leftside is readonly"); }
     }
 
     public class LiteralConst : ExprPiece
     {
         public dynamic Literal;
-        public override Instance Eval(Context context)
+        public override Instance Eval(NameContext context)
         {
             return new Instance { ScalarValue = this.Literal };
         }
@@ -639,7 +641,7 @@ namespace Breakaleg.Core.Models
     {
         public string Name;
 
-        public override Instance Eval(Context context)
+        public override Instance Eval(NameContext context)
         {
             while (context != null)
             {
@@ -651,10 +653,10 @@ namespace Breakaleg.Core.Models
             return null;
         }
 
-        public override void Update(Context context, Instance inst)
+        public override void Update(NameContext context, Instance inst)
         {
             // o ultimo contexto recebe todas as variaveis sem dono (equiv.: dhtml.window)
-            Context defaultContext = null;
+            NameContext defaultContext = null;
             while (context != null)
             {
                 if (context.GetMember(this.Name) != null)
@@ -679,7 +681,7 @@ namespace Breakaleg.Core.Models
     {
         public FunctionCode Function;
 
-        public override Instance Eval(Context context)
+        public override Instance Eval(NameContext context)
         {
             return new Instance { ScalarValue = Function, Context = context };
         }
@@ -694,7 +696,7 @@ namespace Breakaleg.Core.Models
     {
         public ExprPiece[] Items;
 
-        public override Instance Eval(Context context)
+        public override Instance Eval(NameContext context)
         {
             var inst = new Instance();
             var len = Items != null ? Items.Length : 0;
@@ -714,7 +716,7 @@ namespace Breakaleg.Core.Models
     {
         public Dictionary<string, ExprPiece> Pairs;
 
-        public override Instance Eval(Context context)
+        public override Instance Eval(NameContext context)
         {
             var inst = new Instance();
             if (Pairs != null)
@@ -734,24 +736,20 @@ namespace Breakaleg.Core.Models
         public ExprPiece LeftArg;
         public string MemberName;
 
-        public override Instance Eval(Context context)
+        public override Instance Eval(NameContext context)
         {
-            if (MemberName == "innerHTML")
-                MemberName += "";///x
             var leftInst = LeftArg.Eval(context);
             return leftInst.GetMember(MemberName);
         }
 
-        public override void Update(Context context, Instance inst)
+        public override void Update(NameContext context, Instance inst)
         {
-            if (MemberName == "innerHTML")
-                MemberName += "";///x
             var leftInst = LeftArg.Eval(context);
-            if (leftInst != null)///x
+            if (leftInst != null)///TODO necessary?
                 leftInst.SetMember(MemberName, inst);
         }
 
-        public void GetMethod(Context context, out Instance ownerInst, out Instance funcInst)
+        public void GetMethod(NameContext context, out Instance ownerInst, out Instance funcInst)
         {
             ownerInst = LeftArg.Eval(context);
             funcInst = ownerInst.GetMember(MemberName);
@@ -772,7 +770,7 @@ namespace Breakaleg.Core.Models
 
     public abstract class SimpleBinaryExpr : BinaryExpr
     {
-        public override Instance Eval(Context context)
+        public override Instance Eval(NameContext context)
         {
             var leftValue = LeftArg.EvalScalar(context);
             var rightValue = RightArg.EvalScalar(context);
@@ -822,58 +820,58 @@ namespace Breakaleg.Core.Models
         protected override dynamic ComputeBinary(dynamic leftValue, dynamic rightValue) { return leftValue % rightValue; }
     }
 
-    public class ShiftLeftExpr : SimpleBinaryExpr
+    public class ShlExpr : SimpleBinaryExpr
     {
         protected override dynamic ComputeBinary(dynamic leftValue, dynamic rightValue) { return leftValue << rightValue; }
     }
 
-    public class ShiftRightExpr : SimpleBinaryExpr
+    public class ShrExpr : SimpleBinaryExpr
     {
         protected override dynamic ComputeBinary(dynamic leftValue, dynamic rightValue) { return leftValue >> rightValue; }
     }
 
-    public class ShiftRightExExpr : SimpleBinaryExpr
+    public class ShrExExpr : SimpleBinaryExpr
     {
         ///TODO >>>
         protected override dynamic ComputeBinary(dynamic leftValue, dynamic rightValue) { return leftValue >> rightValue; }
     }
 
-    public class LessExpr : SimpleBinaryExpr
+    public class LtExpr : SimpleBinaryExpr
     {
         protected override dynamic ComputeBinary(dynamic leftValue, dynamic rightValue) { return leftValue < rightValue; }
     }
 
-    public class LessEqExpr : SimpleBinaryExpr
+    public class LtEqExpr : SimpleBinaryExpr
     {
         protected override dynamic ComputeBinary(dynamic leftValue, dynamic rightValue) { return leftValue <= rightValue; }
     }
 
-    public class GreaterExpr : SimpleBinaryExpr
+    public class GtExpr : SimpleBinaryExpr
     {
         protected override dynamic ComputeBinary(dynamic leftValue, dynamic rightValue) { return leftValue > rightValue; }
     }
 
-    public class GreaterEqExpr : SimpleBinaryExpr
+    public class GtEqExpr : SimpleBinaryExpr
     {
         protected override dynamic ComputeBinary(dynamic leftValue, dynamic rightValue) { return leftValue >= rightValue; }
     }
 
-    public class EqualExpr : SimpleBinaryExpr
+    public class EqExpr : SimpleBinaryExpr
     {
         protected override dynamic ComputeBinary(dynamic leftValue, dynamic rightValue) { return leftValue == rightValue; }
     }
 
-    public class NotEqualExpr : SimpleBinaryExpr
+    public class NotEqExpr : SimpleBinaryExpr
     {
         protected override dynamic ComputeBinary(dynamic leftValue, dynamic rightValue) { return leftValue != rightValue; }
     }
 
-    public class ExactEqualExpr : SimpleBinaryExpr
+    public class ExactEqExpr : SimpleBinaryExpr
     {
         protected override dynamic ComputeBinary(dynamic leftValue, dynamic rightValue) { return leftValue == rightValue && leftValue.GetType() == rightValue.GetType(); }
     }
 
-    public class NotExactEqualExpr : SimpleBinaryExpr
+    public class NotExactEqExpr : SimpleBinaryExpr
     {
         protected override dynamic ComputeBinary(dynamic leftValue, dynamic rightValue) { return leftValue != rightValue || leftValue.GetType() != rightValue.GetType(); }
     }
@@ -897,7 +895,7 @@ namespace Breakaleg.Core.Models
     {
         public ParensExpr() : base() { callable = true; }
         public ExprPiece InnerExpr;
-        public override Instance Eval(Context context) { return InnerExpr.Eval(context); }
+        public override Instance Eval(NameContext context) { return InnerExpr.Eval(context); }
     }
 
     public class IndexExpr : ExprPiece
@@ -905,13 +903,13 @@ namespace Breakaleg.Core.Models
         public ExprPiece Array;
         public ExprPiece Index;
 
-        public override Instance Eval(Context context)
+        public override Instance Eval(NameContext context)
         {
             var indexValue = Index.EvalScalar(context);
             return Array.Eval(context).GetMember(indexValue);
         }
 
-        public override void Update(Context context, Instance inst)
+        public override void Update(NameContext context, Instance inst)
         {
             var indexValue = Index.EvalScalar(context);
             Array.Eval(context).SetMember(indexValue, inst);
@@ -924,7 +922,7 @@ namespace Breakaleg.Core.Models
 
         public ExprPiece Creator;
 
-        public override Instance Eval(Context context)
+        public override Instance Eval(NameContext context)
         {
             Instance[] args = null;
             ExprPiece funcExpr;
@@ -956,7 +954,7 @@ namespace Breakaleg.Core.Models
     {
         public ExprPiece Arg;
 
-        public override Instance Eval(Context context)
+        public override Instance Eval(NameContext context)
         {
             var argValue = Arg.EvalScalar(context);
             bool updateArg;
@@ -978,37 +976,37 @@ namespace Breakaleg.Core.Models
         protected override dynamic ComputeUnary(ref dynamic value, out bool updateArg) { updateArg = false; return ~value; }
     }
 
-    public class PositiveExpr : UnaryExpr
+    public class PlusExpr : UnaryExpr
     {
         protected override dynamic ComputeUnary(ref dynamic value, out bool updateArg) { updateArg = false; return value; }
     }
 
-    public class NegativeExpr : UnaryExpr
+    public class NegExpr : UnaryExpr
     {
         protected override dynamic ComputeUnary(ref dynamic value, out bool updateArg) { updateArg = false; return -value; }
     }
 
-    public abstract class SelfIncrement : UnaryExpr
+    public abstract class SelfOpExpr : UnaryExpr
     {
-        public SelfIncrement() : base() { callable = true; }
+        public SelfOpExpr() : base() { callable = true; }
     }
 
-    public class PreIncExpr : SelfIncrement
+    public class PreIncExpr : SelfOpExpr
     {
         protected override dynamic ComputeUnary(ref dynamic value, out bool updateArg) { updateArg = true; return ++value; }
     }
 
-    public class PreDecExpr : SelfIncrement
+    public class PreDecExpr : SelfOpExpr
     {
         protected override dynamic ComputeUnary(ref dynamic value, out bool updateArg) { updateArg = true; return --value; }
     }
 
-    public class PosIncExpr : SelfIncrement
+    public class PosIncExpr : SelfOpExpr
     {
         protected override dynamic ComputeUnary(ref dynamic value, out bool updateArg) { updateArg = true; return value++; }
     }
 
-    public class PosDecExpr : SelfIncrement
+    public class PosDecExpr : SelfOpExpr
     {
         protected override dynamic ComputeUnary(ref dynamic value, out bool updateArg) { updateArg = true; return value--; }
     }
@@ -1020,7 +1018,7 @@ namespace Breakaleg.Core.Models
         public ExprPiece FuncExpr;
         public ExprPiece[] Params;
 
-        public override Instance Eval(Context context)
+        public override Instance Eval(NameContext context)
         {
             Instance[] args = null;
             if (Params != null)
@@ -1052,7 +1050,7 @@ namespace Breakaleg.Core.Models
     {
         public ExprPiece Expr;
 
-        public override Instance Eval(Context context)
+        public override Instance Eval(NameContext context)
         {
             var obj = (object)Expr.EvalScalar(context);
             return new Instance { ScalarValue = obj.GetType() };
@@ -1061,7 +1059,7 @@ namespace Breakaleg.Core.Models
 
     public class InstanceOfExpr : OperationExpr
     {
-        public override Instance Eval(Context context)
+        public override Instance Eval(NameContext context)
         {
             return null;/// base.Eval(context);///TODO
         }
@@ -1071,14 +1069,14 @@ namespace Breakaleg.Core.Models
     {
         public AssignExpr() : base() { callable = true; }
 
-        public override Instance Eval(Context context)
+        public override Instance Eval(NameContext context)
         {
             var rightInst = RightArg.Eval(context);
             LeftArg.Update(context, rightInst);
             return rightInst;
         }
 
-        public override void Update(Context context, Instance inst)
+        public override void Update(NameContext context, Instance inst)
         {
             RightArg.Update(context, inst);
             LeftArg.Update(context, inst);
@@ -1089,7 +1087,7 @@ namespace Breakaleg.Core.Models
     {
         public SelfAssign() : base() { callable = true; }
 
-        public override Instance Eval(Context context)
+        public override Instance Eval(NameContext context)
         {
             var leftValue = LeftArg.EvalScalar(context);
             var rightValue = RightArg.EvalScalar(context);
@@ -1127,17 +1125,17 @@ namespace Breakaleg.Core.Models
         protected override dynamic ComputeBinary(dynamic leftValue, dynamic rightValue) { return leftValue % rightValue; }
     }
 
-    public class SelfShiftLeftExpr : SelfAssign
+    public class SelfShlExpr : SelfAssign
     {
         protected override dynamic ComputeBinary(dynamic leftValue, dynamic rightValue) { return leftValue << rightValue; }
     }
 
-    public class SelfShiftRightExpr : SelfAssign
+    public class SelfShrExpr : SelfAssign
     {
         protected override dynamic ComputeBinary(dynamic leftValue, dynamic rightValue) { return leftValue >> rightValue; }
     }
 
-    public class SelfShiftRightExExpr : SelfAssign
+    public class SelfShrExExpr : SelfAssign
     {
         ///TODO >>>
         protected override dynamic ComputeBinary(dynamic leftValue, dynamic rightValue) { return leftValue >> rightValue; }
@@ -1171,7 +1169,7 @@ namespace Breakaleg.Core.Models
     public class ConditionalExpr : OperationExpr
     {
         public ExprPiece Condition, Then, Else;
-        public override Instance Eval(Context context)
+        public override Instance Eval(NameContext context)
         {
             var condValue = Condition.EvalScalar(context);
             dynamic retValue;

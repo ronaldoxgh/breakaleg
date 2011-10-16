@@ -8,7 +8,7 @@ using Breakaleg.Core.Models;
 
 namespace Breakaleg.Consoles
 {
-    public class JSNS
+    public class JSNamespace
     {
         public object window = new JSWindow();
         public object document = new JSDocument();
@@ -28,30 +28,32 @@ namespace Breakaleg.Consoles
         }
 
         public class Object { }
+
         public class String
         {
             public String() { }
             public String(dynamic arg) { }
         }
+
         public class Math
         {
-            public static dynamic sqrt(dynamic p) { return 0; }
-            public static dynamic cos(dynamic p) { return 0; }
-            public static dynamic sin(dynamic p) { return 0; }
+            public static dynamic sqrt(dynamic p) { return System.Math.Sqrt(p); }
+            public static dynamic cos(dynamic p) { return System.Math.Cos(p); }
+            public static dynamic sin(dynamic p) { return System.Math.Sin(p); }
         }
     }
 
-    class JSWindow
+    public class JSWindow
     {
         public void setTimeout(dynamic proc, dynamic delay) { }
     }
 
-    class HTMLDiv
+    public class HTMLDiv
     {
         public string innerHTML;
     }
 
-    class JSDocument
+    public class JSDocument
     {
         private Dictionary<string, object> elems = new Dictionary<string, object>();
 
@@ -84,9 +86,9 @@ namespace Breakaleg.Consoles
                 i = s.IndexOf(">", p + 1) + 1;
             }
 
-            var t = new BreakalegCompiler().Parse(sb.ToString());
-            var cx = new Context();
-            cx.AddNamespace(new JSNS());
+            var t = new JSCompiler().Parse(sb.ToString());
+            var cx = new NameContext();
+            cx.AddNamespace(new JSNamespace());
             t.Run(cx);
         }
     }

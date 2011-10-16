@@ -11,9 +11,9 @@ using Breakaleg.Core.Models;
 
 namespace Breakaleg.Core.Compilers
 {
-    class JavaScriptReader : StringReader
+    class JSReader : StringReader
     {
-        public JavaScriptReader(string code) : base(code) { }
+        public JSReader(string code) : base(code) { }
         public override bool Comments()
         {
             return LineComment() || BlockComment();
@@ -50,11 +50,11 @@ namespace Breakaleg.Core.Compilers
         }
     }
 
-    public class BreakalegCompiler
+    public class JSCompiler
     {
-        public static dynamic Run(string code, string eval, Context context)
+        public static dynamic Run(string code, string eval, NameContext context)
         {
-            var compiler = new BreakalegCompiler();
+            var compiler = new JSCompiler();
             var byteCode = compiler.Parse(code);
             var exitState = byteCode.Run(context);
             if (eval != null)
@@ -67,7 +67,7 @@ namespace Breakaleg.Core.Compilers
 
         public CodePiece Parse(string code)
         {
-            var p = new JavaScriptReader(code);
+            var p = new JSReader(code);
             var block = new CodeBlock();
             ReadCodes(p, ref block);
             return block;
@@ -337,7 +337,7 @@ namespace Breakaleg.Core.Compilers
                 {
                     ExprPiece arg;
                     ReqVal(p, out arg);
-                    AddCode(ref jsfn.Code, new BreakCode { Kind = BreakCode.TKind.Return, Arg = arg });
+                    AddCode(ref jsfn.Code, new ReturnCode { Arg = arg });
                 }
                 func = jsfn;
                 return true;
@@ -433,7 +433,7 @@ namespace Breakaleg.Core.Compilers
         {
             if (p.ThisWord("break"))
             {
-                AddCode(ref block, new BreakCode { Kind = BreakCode.TKind.Break });
+                AddCode(ref block, new BreakCode());
                 return true;
             }
             return false;
@@ -443,7 +443,7 @@ namespace Breakaleg.Core.Compilers
         {
             if (p.ThisWord("continue"))
             {
-                AddCode(ref block, new BreakCode { Kind = BreakCode.TKind.Continue });
+                AddCode(ref block, new ContinueCode());
                 return true;
             }
             return false;
@@ -453,9 +453,9 @@ namespace Breakaleg.Core.Compilers
         {
             if (p.ThisWord("return"))
             {
-                var jsbreak = new BreakCode { Kind = BreakCode.TKind.Return };
-                ReadValue(p, out jsbreak.Arg);
-                AddCode(ref block, jsbreak);
+                var jsret = new ReturnCode();
+                ReadValue(p, out jsret.Arg);
+                AddCode(ref block, jsret);
                 return true;
             }
             return false;
@@ -525,20 +525,20 @@ namespace Breakaleg.Core.Compilers
         private static List<Type> OperatorPrecedence = new List<Type>(
         new[]{
             typeof(PreIncExpr), typeof(PreDecExpr), typeof(PosIncExpr), typeof(PosDecExpr), typeof(BoolNotExpr), typeof(BitNotExpr),
-            typeof(PositiveExpr), typeof(NegativeExpr),
+            typeof(PlusExpr), typeof(NegExpr),
             typeof(TypeOfExpr),
             typeof(MultiplyExpr), typeof(DivideExpr), typeof(ModulusExpr), typeof(SumExpr), typeof(SubtractExpr),
-            typeof(ShiftLeftExpr), typeof(ShiftRightExpr), typeof(ShiftRightExExpr),
-            typeof(LessExpr), typeof(LessEqExpr), typeof(GreaterExpr), typeof(GreaterEqExpr),
+            typeof(ShlExpr), typeof(ShrExpr), typeof(ShrExExpr),
+            typeof(LtExpr), typeof(LtEqExpr), typeof(GtExpr), typeof(GtEqExpr),
             typeof(InstanceOfExpr),
-            typeof(EqualExpr), typeof(NotEqualExpr), typeof(ExactEqualExpr), typeof(NotExactEqualExpr),
+            typeof(EqExpr), typeof(NotEqExpr), typeof(ExactEqExpr), typeof(NotExactEqExpr),
             typeof(BitAndExpr), typeof(BitXorExpr), typeof(BitOrExpr),
             typeof(BoolAndExpr), typeof(BoolOrExpr),
             typeof(ConditionalExpr),
             typeof(AssignExpr),
             typeof(SelfSumExpr), typeof(SelfSubtractExpr), typeof(SelfMultiplyExpr), typeof(SelfDivideExpr),
             typeof(SelfModulusExpr),
-            typeof(SelfShiftLeftExpr), typeof(SelfShiftRightExpr), typeof(SelfShiftRightExExpr),
+            typeof(SelfShlExpr), typeof(SelfShrExpr), typeof(SelfShrExExpr),
             typeof(SelfBitAndExpr), typeof(SelfBitXorExpr), typeof(SelfBitOrExpr),
             typeof(SelfBoolAndExpr), typeof(SelfBoolOrExpr),            
         });
@@ -638,9 +638,9 @@ namespace Breakaleg.Core.Compilers
                 else if (i == 1)
                     op = new PreDecExpr();
                 else if (i == 2)
-                    op = new PositiveExpr();
+                    op = new PlusExpr();
                 else if (i == 3)
-                    op = new NegativeExpr();
+                    op = new NegExpr();
                 else if (i == 4)
                     op = new BoolNotExpr();
                 else if (i == 5)
@@ -667,12 +667,12 @@ namespace Breakaleg.Core.Compilers
                 ">=", "<=", "==", "!=", "<<", ">>", "&&", "||", "^=", "&=", "|=", "/=", "*=", "+=", "-=", "%=",
                 ">", "<", "=", "+", "-", "*", "/", "%", "&", "|", "^" };
         private static Type[] binop = { 
-                    typeof(SelfShiftRightExExpr),
-                    typeof(ExactEqualExpr), typeof(ShiftRightExExpr), typeof(SelfShiftRightExpr),typeof(SelfShiftLeftExpr),typeof(NotExactEqualExpr),
-                    typeof(GreaterEqExpr),typeof(LessEqExpr),typeof(EqualExpr),typeof(NotEqualExpr),typeof(ShiftLeftExpr),typeof(ShiftRightExpr),
+                    typeof(SelfShrExExpr),
+                    typeof(ExactEqExpr), typeof(ShrExExpr), typeof(SelfShrExpr),typeof(SelfShlExpr),typeof(NotExactEqExpr),
+                    typeof(GtEqExpr),typeof(LtEqExpr),typeof(EqExpr),typeof(NotEqExpr),typeof(ShlExpr),typeof(ShrExpr),
                     typeof(BoolAndExpr),typeof(BoolOrExpr),typeof(SelfBitXorExpr),typeof(SelfBitAndExpr),typeof(SelfBitOrExpr),
                     typeof(SelfDivideExpr),typeof(SelfMultiplyExpr),typeof(SelfSumExpr),typeof(SelfSubtractExpr),typeof(SelfModulusExpr),
-                    typeof(GreaterExpr),typeof(LessExpr),typeof(AssignExpr),typeof(SumExpr),typeof(SubtractExpr),typeof(MultiplyExpr),
+                    typeof(GtExpr),typeof(LtExpr),typeof(AssignExpr),typeof(SumExpr),typeof(SubtractExpr),typeof(MultiplyExpr),
                     typeof(DivideExpr),typeof(ModulusExpr),typeof(BitAndExpr),typeof(BitOrExpr),typeof(BitXorExpr),
                                             };
         private bool ReadBinaryOp(StringReader p, out OperationExpr bin)

@@ -3,10 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading;
+using System.IO;
 
 using Breakaleg.Core.Models;
 using Breakaleg.Core.Compilers;
-using System.IO;
 
 namespace Breakaleg.Consoles
 {
@@ -18,11 +18,11 @@ namespace Breakaleg.Consoles
             var prefix = File.ReadAllText(@"c:\projetos\breakaleg\sunspider\sunspider-test-prefix.js");
             var run = File.ReadAllText(@"c:\projetos\breakaleg\sunspider\sunspider-test-run.js");
 
-            var c = new BreakalegCompiler();
+            var c = new JSCompiler();
 
             var t = c.Parse(contents + prefix + run);
-            var cx = new Context();
-            cx.AddNamespace(new JSNS());
+            var cx = new NameContext();
+            cx.AddNamespace(new JSNamespace());
             t.Run(cx);
 
             var tc = cx.GetMember("testContents");
@@ -35,7 +35,7 @@ namespace Breakaleg.Consoles
         static void Clock()
         {
             CodePiece c = null;
-            var p = new BreakalegCompiler();
+            var p = new JSCompiler();
 
             Thread.Sleep(1000);
 
@@ -45,7 +45,7 @@ namespace Breakaleg.Consoles
             var h1 = DateTime.Now;
             Console.WriteLine("compiled 90 times in: " + (int)((h1 - h0).TotalMilliseconds) + "ms");
 
-            var ctx = new Context();
+            var ctx = new NameContext();
             var hh0 = DateTime.Now;
             for (int i = 0; i < 50000; i++)
                 c.Run(ctx);
