@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<!-- saved from url=(1526)http://www.webkit.org/perf/sunspider-0.9.1/sunspider-0.9.1/results.html?%7B%22v%22:%20%22sunspider-0.9.1%22,%20%223d-cube%22:%5B20,13,20,15,25,16,17,18,31,16%5D,%223d-morph%22:%5B13,14,14,16,22,14,12,13,24,13%5D,%223d-raytrace%22:%5B20,31,28,22,35,21,25,23,31,13%5D,%22access-binary-trees%22:%5B2,3,3,2,3,2,2,3,0,3%5D,%22access-fannkuch%22:%5B12,12,13,12,51,12,12,12,17,14%5D,%22access-nbody%22:%5B9,8,10,8,23,9,8,9,17,9%5D,%22access-nsieve%22:%5B5,5,6,5,11,6,5,5,9,6%5D,%22bitops-3bit-bits-in-byte%22:%5B7,6,14,7,10,6,7,7,20,7%5D,%22bitops-bits-in-byte%22:%5B8,8,8,8,15,8,8,8,14,8%5D,%22bitops-bitwise-and%22:%5B11,12,12,13,13,16,12,11,21,12%5D,%22bitops-nsieve-bits%22:%5B10,10,11,11,10,11,10,10,17,10%5D,%22controlflow-recursive%22:%5B4,4,4,4,4,5,4,5,7,5%5D,%22crypto-aes%22:%5B12,11,11,12,12,11,11,12,13,11%5D,%22crypto-md5%22:%5B8,8,8,10,8,9,9,9,27,9%5D,%22crypto-sha1%22:%5B9,10,12,9,11,9,16,9,21,9%5D,%22date-format-tofte%22:%5B16,16,17,18,17,16,17,17,22,17%5D,%22date-format-xparb%22:%5B19,19,19,20,19,19,20,19,33,20%5D,%22math-cordic%22:%5B5,5,6,14,6,11,6,6,8,6%5D,%22math-partial-sums%22:%5B15,15,15,15,15,14,15,15,20,15%5D,%22math-spectral-norm%22:%5B7,8,7,6,6,7,6,7,11,7%5D,%22regexp-dna%22:%5B14,14,13,14,15,14,13,14,20,13%5D,%22string-base64%22:%5B7,8,6,7,7,6,6,6,17,6%5D,%22string-fasta%22:%5B18,18,19,17,18,18,17,19,37,18%5D,%22string-tagcloud%22:%5B27,29,27,28,27,28,27,26,25,27%5D,%22string-unpack-code%22:%5B38,39,39,39,40,37,38,38,37,38%5D,%22string-validate-input%22:%5B19,19,20,20,19,20,19,17,32,23%5D%7D -->
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<meta charset="utf8">
+
+<!--
+ Copyright (C) 2007 Apple Inc.  All rights reserved.
+
+ Redistribution and use in source and binary forms, with or without
+ modification, are permitted provided that the following conditions
+ are met:
+ 1. Redistributions of source code must retain the above copyright
+    notice, this list of conditions and the following disclaimer.
+ 2. Redistributions in binary form must reproduce the above copyright
+    notice, this list of conditions and the following disclaimer in the
+    documentation and/or other materials provided with the distribution.
+
+ THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
+ OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+-->
+
+<title>SunSpider 0.9.1 JavaScript Benchmark Results (sunspider-0.9.1 test suite)</title>
+<link rel="stylesheet" href="http://www.webkit.org/perf/sunspider-0.9.1/sunspider.css">
+</head>
+
+<body>
+<h2><span id="logo">☀</span>SunSpider 0.9.1 JavaScript Benchmark Results</h2>
+
+<h3>Content Version: sunspider-0.9.1</h3>
+
+<p><a href="http://www.webkit.org/perf/sunspider-0.9.1/sunspider-0.9.1/driver.html">Run Again</a></p>
+
+<p><input style="width: 90%;" id="selfUrl" type="text" readonly="readonly"><br>
+<small>(You can bookmark this results URL for later comparison.)</small></p>
+
+<form onsubmit="event.preventDefault(); compare(other.value);">To compare to another run, paste a saved result URL in the text field below and press enter:<br>
+<input style="width: 90%;" name="other" type="text"><br>
+</form>
+
+<pre id="console">
+<br>============================================<br>RESULTS (means and 95% confidence intervals)<br>--------------------------------------------<br>Total:                  372.7ms +/- 12.3%<br>--------------------------------------------<br><br>  3d:                    59.5ms +/- 16.7%<br>    cube:                19.1ms +/- 20.0%<br>    morph:               15.5ms +/- 19.0%<br>    raytrace:            24.9ms +/- 18.6%<br><br>  access:                36.3ms +/- 37.0%<br>    binary-trees:         2.3ms +/- 29.5%<br>    fannkuch:            16.7ms +/- 52.0%<br>    nbody:               11.0ms +/- 32.4%<br>    nsieve:               6.3ms +/- 23.3%<br><br>  bitops:                42.7ms +/- 18.6%<br>    3bit-bits-in-byte:    9.1ms +/- 35.6%<br>    bits-in-byte:         9.3ms +/- 21.1%<br>    bitwise-and:         13.3ms +/- 16.4%<br>    nsieve-bits:         11.0ms +/- 14.0%<br><br>  controlflow:            4.6ms +/- 15.0%<br>    recursive:            4.6ms +/- 15.0%<br><br>  crypto:                33.6ms +/- 21.0%<br>    aes:                 11.6ms +/- 4.3%<br>    md5:                 10.5ms +/- 39.7%<br>    sha1:                11.5ms +/- 24.9%<br><br>  date:                  38.0ms +/- 11.4%<br>    format-tofte:        17.3ms +/- 7.3%<br>    format-xparb:        20.7ms +/- 15.0%<br><br>  math:                  29.9ms +/- 9.9%<br>    cordic:               7.3ms +/- 28.8%<br>    partial-sums:        15.4ms +/- 7.6%<br>    spectral-norm:        7.2ms +/- 14.6%<br><br>  regexp:                14.4ms +/- 10.3%<br>    dna:                 14.4ms +/- 10.3%<br><br>  string:               113.7ms +/- 7.7%<br>    base64:               7.6ms +/- 31.7%<br>    fasta:               19.9ms +/- 21.7%<br>    tagcloud:            27.1ms +/- 2.9%<br>    unpack-code:         38.3ms +/- 1.8%<br>    validate-input:      20.8ms +/- 14.5%<br></pre>
+
+<script src="./SunSpider 0.9.1 JavaScript Benchmark Results (sunspider-0.9.1 test suite)_files/json2.js"></script>
+<script>
+var selfUrlInput = document.getElementById("selfUrl");
+selfUrlInput.value = location;
+
+var outputJSON = JSON.parse(decodeURI(location.search.substring(1)));
+var version = outputJSON["v"];
+delete outputJSON["v"];
+var output = pivot(outputJSON);
+
+function pivot(input) {
+    var output = [];
+    for (var test in input) {
+        for (var i = 0; i < input[test].length; i++) {
+             if (!output[i])
+                 output[i] = {};
+             output[i][test] =  input[test][i];
+        }
+    }
+    return output;
+}
+
+function print(str) {
+    var console = document.getElementById("console");
+    console.appendChild(document.createTextNode(str));
+    console.appendChild(document.createElement("br"));
+}
+</script>
+
+<script src="./SunSpider 0.9.1 JavaScript Benchmark Results (sunspider-0.9.1 test suite)_files/sunspider-test-prefix.js"></script>
+<script src="./SunSpider 0.9.1 JavaScript Benchmark Results (sunspider-0.9.1 test suite)_files/sunspider-analyze-results.js"></script>
+<script src="./SunSpider 0.9.1 JavaScript Benchmark Results (sunspider-0.9.1 test suite)_files/sunspider-compare-results.js"></script>
+
+<script>
+var output2 = output;
+var version2 = version;
+
+function compare(other)
+{
+    document.getElementById("console").innerHTML = "";
+
+    var output1JSON = JSON.parse(decodeURI(other.split("?")[1]));
+    var version1 = output1JSON["v"];
+    delete output1JSON["v"];
+    if (version1 != version2) {
+        print("ERROR: cannot compare version " + version1 + ' with version ' + version2);
+    } else {
+        var output1 = pivot(output1JSON);
+        sunspiderCompareResults(output1, output2);
+    }
+}
+</script>
+
+
+
+
+</body></html>

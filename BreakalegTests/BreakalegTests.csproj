@@ -50,6 +50,10 @@
     <Compile Include="UnitTest1.cs" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\BreakalegConsole\BreakalegConsole.csproj">
+      <Project>{DC29ED2E-A884-4F7C-BC80-356B0C7CBAB3}</Project>
+      <Name>BreakalegConsole</Name>
+    </ProjectReference>
     <ProjectReference Include="..\BreakalegCore\BreakalegCore.csproj">
       <Project>{070C7140-DC5A-448B-B881-D679B2F80D5B}</Project>
       <Name>BreakalegCore</Name>

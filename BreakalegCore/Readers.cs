@@ -37,6 +37,7 @@ namespace Breakaleg.Core.Readers
         }
 
         public string CurrentLine { get { return new string(_chars, _pos._lineStart, _pos.CharIndex - _pos._lineStart); } }
+        public string RestOf { get { return new string(_chars, _pos._lineStart, 80); } }
 
         public TextPosition Position
         {
@@ -115,18 +116,35 @@ namespace Breakaleg.Core.Readers
         {
             var prior = Position;
             Skip();
+            var sb = new StringBuilder();
             char endCh = '\x00';
             if (ThisCharNoSkip("'\"", out endCh))
             {
-                var start = Position;
                 char ch;
                 while (AnyChar(out ch))
-                    if (ch == endCh)
+                    if (ch == '\\')
                     {
-                        textRead = Substr(start, Position);
-                        textRead = textRead.Substring(0, textRead.Length - 1);
+                        if (!AnyChar(out ch))
+                            throw new Exception("unterminated string literal");
+                        if (ch == 'n')
+                            sb.Append('\n');
+                        else if (ch == '\r')
+                        {
+                            sb.Append(ch);
+                            ThisCharNoSkip('\n');
+                        }
+                        else if (ch == '\n' || ch == '"' || ch == '\\')
+                            sb.Append(ch);
+                        else
+                            sb.Append(ch);
+                    }
+                    else if (ch == endCh)
+                    {
+                        textRead = sb.ToString();
                         return true;
                     }
+                    else
+                        sb.Append(ch);
             }
             Position = prior;
             textRead = null;

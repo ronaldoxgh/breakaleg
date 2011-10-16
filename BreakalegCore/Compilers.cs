@@ -73,10 +73,10 @@ namespace Breakaleg.Core.Compilers
             return block;
         }
 
-        private void Expect(bool truth, string msg = "expected")
+        private void Expect(StringReader p, bool truth, string msg = "expected")
         {
             if (!truth)
-                throw new Exception(msg);
+                throw new Exception(msg + "\n" + p.RestOf);
         }
 
         private static string[] reservedWords = { "break", "case", "catch", "continue", "debugger", "default", "delete", "do", 
@@ -113,8 +113,8 @@ namespace Breakaleg.Core.Compilers
         {
             var lret = ReadBlock(p, ref block) || ReadIf(p, ref block) || ReadWhile(p, ref block) ||
                 ReadDo(p, ref block) || ReadFunctionDecl(p, ref block) || ReadDelete(p, ref block) || ReadTry(p, ref block) ||
-                ReadVar(p, ref block) || ReadFor(p, ref block) || ReadSwitch(p, ref block) || ReadBreak(p, ref block) ||
-                ReadReturn(p, ref block) || ReadContinue(p, ref block) || ReadCall(p, ref block);
+                ReadVar(p, ref block) || ReadForEach(p, ref block) || ReadFor(p, ref block) || ReadSwitch(p, ref block) ||
+                ReadBreak(p, ref block) || ReadReturn(p, ref block) || ReadContinue(p, ref block) || ReadCall(p, ref block);
             if (lret)
                 p.ThisText(";");
             return lret;
@@ -149,34 +149,46 @@ namespace Breakaleg.Core.Compilers
             return false;
         }
 
+        private void ReqText(StringReader p, string text)
+        {
+            if (!p.ThisText(text))
+                throw new Exception("expected '" + text + "'" + "\n" + p.RestOf);
+        }
+
+        private void ReqVal(StringReader p, out ExprPiece val)
+        {
+            if (!ReadValue(p, out val))
+                throw new Exception("value expected" + "\n" + p.RestOf);
+        }
+
         private bool ReadTry(StringReader p, ref CodeBlock block)
         {
             if (p.ThisWord("try"))
             {
                 var jstry = new TryCode();
-                Expect(p.ThisText("{"));
+                ReqText(p, "{");
                 ReadCodes(p, ref jstry.Code);
-                Expect(p.ThisText("}"));
+                ReqText(p, "}");
                 int catchCount = 0;
                 int finallyCount = 0;
                 if (p.ThisWord("catch"))
                 {
-                    Expect(p.ThisText("("));
+                    ReqText(p, "(");
                     ReadIdent(p, out jstry.CatchName);
-                    Expect(p.ThisText(")"));
-                    Expect(p.ThisText("{"));
+                    ReqText(p, ")");
+                    ReqText(p, "{");
                     ReadCodes(p, ref jstry.Catch);
-                    Expect(p.ThisText("}"));
+                    ReqText(p, "}");
                     catchCount++;
                 }
                 if (p.ThisWord("finally"))
                 {
-                    Expect(p.ThisText("{"));
+                    ReqText(p, "{");
                     ReadCodes(p, ref jstry.Finally);
-                    Expect(p.ThisText("}"));
+                    ReqText(p, "}");
                     finallyCount++;
                 }
-                Expect(catchCount > 0 || finallyCount > 0);
+                Expect(p, catchCount > 0 || finallyCount > 0, "catch/finally");
                 AddCode(ref block, jstry);
                 return true;
             }
@@ -188,17 +200,17 @@ namespace Breakaleg.Core.Compilers
             if (p.ThisWord("switch"))
             {
                 var jsswitch = new SwitchCode();
-                Expect(p.ThisText("("));
-                Expect(ReadValue(p, out jsswitch.Arg));
-                Expect(p.ThisText(")"));
-                Expect(p.ThisText("{"));
+                ReqText(p, "(");
+                ReqVal(p, out jsswitch.Arg);
+                ReqText(p, ")");
+                ReqText(p, "{");
                 while (ReadCase(p, jsswitch)) ;
                 if (p.ThisWord("default"))
                 {
-                    Expect(p.ThisText(":"));
+                    ReqText(p, ":");
                     ReadCodes(p, ref jsswitch.Default);
                 }
-                Expect(p.ThisText("}"));
+                ReqText(p, "}");
                 AddCode(ref block, jsswitch);
                 return true;
             }
@@ -210,8 +222,8 @@ namespace Breakaleg.Core.Compilers
             if (p.ThisWord("case"))
             {
                 var jscase = new SwitchCaseCode();
-                Expect(ReadValue(p, out jscase.Test));
-                Expect(p.ThisText(":"));
+                ReqVal(p, out jscase.Test);
+                ReqText(p, ":");
                 ReadCodes(p, ref jscase.Code);
                 (jsswitch.Cases ?? (jsswitch.Cases = new List<SwitchCaseCode>())).Add(jscase);
                 return true;
@@ -223,11 +235,14 @@ namespace Breakaleg.Core.Compilers
         {
             if (p.ThisWord("var"))
             {
+            ANOTHER:
                 var jsvar = new VarCode();
-                Expect(ReadIdent(p, out jsvar.Name));
+                Expect(p, ReadIdent(p, out jsvar.Name), "var name");
                 if (p.ThisText("="))
-                    Expect(ReadValue(p, out jsvar.Value));
+                    ReqVal(p, out jsvar.Value);
                 AddCode(ref block, jsvar);
+                if (p.ThisText(","))
+                    goto ANOTHER;
                 return true;
             }
             return false;
@@ -238,8 +253,8 @@ namespace Breakaleg.Core.Compilers
             if (p.ThisWord("delete"))
             {
                 ExprPiece objRef;
-                Expect(ReadValue(p, out objRef));
-                Expect(objRef is DotExpr || objRef is NamedExpr || objRef is IndexExpr);
+                ReqVal(p, out objRef);
+                Expect(p, objRef is DotExpr || objRef is NamedExpr || objRef is IndexExpr, "delete expr");
                 var jsdel = new DeleteCode();
                 jsdel.ObjectRef = objRef;
                 AddCode(ref block, jsdel);
@@ -269,8 +284,8 @@ namespace Breakaleg.Core.Compilers
                 // reqName diferencia esses dois usos, um tem nome o outro nao
                 // ex.: function X(){} ou function(){}
                 if (reqName)
-                    Expect(ReadIdent(p, out jsfn.Name));
-                Expect(p.ThisText("("));
+                    Expect(p, ReadIdent(p, out jsfn.Name), "func name");
+                ReqText(p, "(");
                 var plist = new List<string>();
                 string pn;
                 while (ReadIdent(p, out pn))
@@ -280,10 +295,10 @@ namespace Breakaleg.Core.Compilers
                         break;
                 }
                 jsfn.Params = plist.Count > 0 ? plist.ToArray() : null;
-                Expect(p.ThisText(")"));
-                Expect(p.ThisText("{"));
+                ReqText(p, ")");
+                ReqText(p, "{");
                 ReadCodes(p, ref jsfn.Code);
-                Expect(p.ThisText("}"));
+                ReqText(p, "}");
                 func = jsfn;
                 return true;
             }
@@ -316,12 +331,12 @@ namespace Breakaleg.Core.Compilers
                 if (p.ThisText("{"))
                 {
                     ReadCodes(p, ref jsfn.Code);
-                    Expect(p.ThisText("}"));
+                    ReqText(p, "}");
                 }
                 else
                 {
                     ExprPiece arg;
-                    Expect(ReadValue(p, out arg));
+                    ReqVal(p, out arg);
                     AddCode(ref jsfn.Code, new BreakCode { Kind = BreakCode.TKind.Return, Arg = arg });
                 }
                 func = jsfn;
@@ -333,18 +348,40 @@ namespace Breakaleg.Core.Compilers
             return false;
         }
 
+        private bool ReadForEach(StringReader p, ref CodeBlock block)
+        {
+            var saved = p.Position;
+            if (p.ThisWord("for"))
+            {
+                var jsfor = new ForeachCode();
+                ReqText(p, "(");
+                if (p.ThisWord("var"))
+                    if (ReadIdent(p, out jsfor.VarName))
+                        if (p.ThisWord("in"))
+                        {
+                            ReqVal(p, out jsfor.SetExpr);
+                            ReqText(p, ")");
+                            ReadCode(p, ref jsfor.Code);
+                            AddCode(ref block, jsfor);
+                            return true;
+                        }
+                p.Position = saved;
+            }
+            return false;
+        }
+
         private bool ReadFor(StringReader p, ref CodeBlock block)
         {
             if (p.ThisWord("for"))
             {
                 var jsfor = new ForCode();
-                Expect(p.ThisText("("));
-                Expect(ReadForInitialization(p, jsfor));
-                Expect(p.ThisText(";"));
-                Expect(ReadForCondition(p, jsfor));
-                Expect(p.ThisText(";"));
-                Expect(ReadForIncrement(p, jsfor));
-                Expect(p.ThisText(")"));
+                ReqText(p, "(");
+                ReadForInitialization(p, jsfor);
+                ReqText(p, ";");
+                ReadForCondition(p, jsfor);
+                ReqText(p, ";");
+                ReadForIncrement(p, jsfor);
+                ReqText(p, ")");
                 ReadCode(p, ref jsfor.Code);
                 AddCode(ref block, jsfor);
                 return true;
@@ -358,14 +395,14 @@ namespace Breakaleg.Core.Compilers
             if (ReadVar(p, ref foo))
             {
                 var vardecl = (VarCode)foo.Codes.First();
-                Expect(vardecl.Value != null);
+                Expect(p, vardecl.Value != null, "for var");
                 jsfor.Initialization = vardecl;
                 return true;
             }
             else if (ReadCall(p, ref foo))
             {
                 var init = (CallCode)foo.Codes.First();
-                Expect(init.Arg is AssignExpr);
+                Expect(p, init.Arg is AssignExpr, "for assign");
                 jsfor.Initialization = init;
                 return true;
             }
@@ -384,7 +421,7 @@ namespace Breakaleg.Core.Compilers
             if (ReadCall(p, ref foo))
             {
                 var incr = (CallCode)foo.Codes.First();
-                Expect(incr.Arg is OperationExpr);
+                Expect(p, incr.Arg is OperationExpr, "for incr arg");
                 jsfor.Increment = incr;
                 return true;
             }
@@ -429,13 +466,13 @@ namespace Breakaleg.Core.Compilers
             if (p.ThisWord("do"))
             {
                 var jsdo = new UntilCode();
-                Expect(p.ThisText("{"));
+                ReqText(p, "{");
                 ReadCodes(p, ref jsdo.Code);
-                Expect(p.ThisText("}"));
-                Expect(p.ThisWord("while"));
-                Expect(p.ThisText("("));
-                Expect(ReadValue(p, out jsdo.Condition));
-                Expect(p.ThisText(")"));
+                ReqText(p, "}");
+                Expect(p, p.ThisWord("while"), "while");
+                ReqText(p, "(");
+                ReqVal(p, out jsdo.Condition);
+                ReqText(p, ")");
                 AddCode(ref block, jsdo);
                 return true;
             }
@@ -447,9 +484,9 @@ namespace Breakaleg.Core.Compilers
             if (p.ThisWord("while"))
             {
                 var jswhile = new WhileCode();
-                Expect(p.ThisText("("));
-                Expect(ReadValue(p, out jswhile.Condition));
-                Expect(p.ThisText(")"));
+                ReqText(p, "(");
+                ReqVal(p, out jswhile.Condition);
+                ReqText(p, ")");
                 ReadCode(p, ref jswhile.Code);
                 AddCode(ref block, jswhile);
                 return true;
@@ -462,9 +499,9 @@ namespace Breakaleg.Core.Compilers
             if (p.ThisWord("if"))
             {
                 var jsif = new IfCode();
-                Expect(p.ThisText("("));
-                Expect(ReadValue(p, out jsif.Condition));
-                Expect(p.ThisText(")"));
+                ReqText(p, "(");
+                ReqVal(p, out jsif.Condition);
+                ReqText(p, ")");
                 ReadCode(p, ref jsif.Then);
                 if (p.ThisWord("else"))
                     ReadCode(p, ref jsif.Else);
@@ -479,7 +516,7 @@ namespace Breakaleg.Core.Compilers
             if (p.ThisText("{"))
             {
                 ReadCodes(p, ref block);
-                Expect(p.ThisText("}"));
+                ReqText(p, "}");
                 return true;
             }
             return false;
@@ -516,7 +553,7 @@ namespace Breakaleg.Core.Compilers
             else if (ReadUnaryPreOp(p, out op))
             {
                 mixture.Add(op);
-                Expect(ReadSimpleValue(p, out vaux));
+                Expect(p, ReadSimpleValue(p, out vaux), "simple");
                 mixture.Add(vaux);
             }
             else
@@ -538,7 +575,7 @@ namespace Breakaleg.Core.Compilers
             while (ReadBinaryOp(p, out op))
             {
                 mixture.Add(op);
-                Expect(ReadValueItem(p, mixture));
+                Expect(p, ReadValueItem(p, mixture), "mix item");
             }
             value = SplitOperands(mixture, 0, mixture.Count);
             return true;
@@ -668,8 +705,8 @@ namespace Breakaleg.Core.Compilers
             if (p.ThisWord("new"))
             {
                 ExprPiece creator;
-                Expect(ReadNamedValue(p, out creator) || ReadFloatValue(p, out creator) || ReadStringValue(p, out creator) ||
-                    ReadParensValue(p, out creator) || ReadArrayValue(p, out creator) || ReadObjectValue(p, out creator));
+                Expect(p, ReadNamedValue(p, out creator) || ReadFloatValue(p, out creator) || ReadStringValue(p, out creator) ||
+                    ReadParensValue(p, out creator) || ReadArrayValue(p, out creator) || ReadObjectValue(p, out creator), "new arg");
                 while (ReadMemberValue(p, ref creator))
                     if (creator is ParamsExpr)
                         break;
@@ -689,7 +726,7 @@ namespace Breakaleg.Core.Compilers
                 if (p.ThisText(":"))
                 {
                     ExprPiece pairValue;
-                    Expect(ReadValue(p, out pairValue));
+                    ReqVal(p, out pairValue);
                     (obj.Pairs ?? (obj.Pairs = new Dictionary<string, ExprPiece>())).Add(pairName, pairValue);
                     return true;
                 }
@@ -706,7 +743,7 @@ namespace Breakaleg.Core.Compilers
                 while (ReadValuePair(p, obj))
                     if (!p.ThisText(","))
                         break;
-                Expect(p.ThisText("}"));
+                ReqText(p, "}");
                 value = obj;
                 return true;
             }
@@ -726,7 +763,7 @@ namespace Breakaleg.Core.Compilers
                     if (!p.ThisText(","))
                         break;
                 }
-                Expect(p.ThisText("]"));
+                ReqText(p, "]");
                 value = new ArrayExpr { Items = list.ToArray() };
                 return true;
             }
@@ -769,8 +806,8 @@ namespace Breakaleg.Core.Compilers
             {
                 var index = new IndexExpr();
                 index.Array = value;
-                Expect(ReadValue(p, out index.Index));
-                Expect(p.ThisText("]"));
+                ReqVal(p, out index.Index);
+                ReqText(p, "]");
                 value = index;
                 return true;
             }
@@ -783,7 +820,7 @@ namespace Breakaleg.Core.Compilers
             {
                 var parens = new ParensExpr();
                 ReadValue(p, out parens.InnerExpr);
-                Expect(p.ThisText(")"));
+                ReqText(p, ")");
                 value = parens;
                 return true;
             }
@@ -831,7 +868,7 @@ namespace Breakaleg.Core.Compilers
                     if (!p.ThisText(","))
                         break;
                 }
-                Expect(p.ThisText(")"));
+                ReqText(p, ")");
                 value = new ParamsExpr { Params = list.ToArray() };
                 return true;
             }

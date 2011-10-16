@@ -6,12 +6,33 @@ using System.Threading;
 
 using Breakaleg.Core.Models;
 using Breakaleg.Core.Compilers;
+using System.IO;
 
 namespace Breakaleg.Consoles
 {
     class Program
     {
         static void Main(string[] args)
+        {
+            var contents = File.ReadAllText(@"c:\projetos\breakaleg\sunspider\sunspider-test-contents.js");
+            var prefix = File.ReadAllText(@"c:\projetos\breakaleg\sunspider\sunspider-test-prefix.js");
+            var run = File.ReadAllText(@"c:\projetos\breakaleg\sunspider\sunspider-test-run.js");
+
+            var c = new BreakalegCompiler();
+
+            var t = c.Parse(contents + prefix + run);
+            var cx = new Context();
+            cx.AddNamespace(new JSNS());
+            t.Run(cx);
+
+            var tc = cx.GetMember("testContents");
+            var ts = cx.GetMember("tests");
+            var ca = cx.GetMember("categories");
+
+            Console.Write(tc + " " + ts + " " + ca);
+        }
+
+        static void Clock()
         {
             CodePiece c = null;
             var p = new BreakalegCompiler();

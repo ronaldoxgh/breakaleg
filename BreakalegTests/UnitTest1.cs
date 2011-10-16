@@ -307,5 +307,38 @@ namespace Breakaleg.Tests
             Assert.AreEqual(24, BreakalegCompiler.Run("f=a:{return 8*a}; r=f(3)", "r", new Context()));
             Assert.AreEqual(40, BreakalegCompiler.Run("f=:8*5; r=f()", "r", new Context()));
         }
+
+        [TestMethod]
+        public void TestMethod_MethodsAsClosures()
+        {
+            var code = @"var obj = {
+              firstName:'john', lastName:'doe',
+              getFullName: :this.firstName+' '+this.lastName,
+            };
+            obj.lastName='nash';
+            r=obj.getFullName();
+            ";
+            Assert.AreEqual("john nash", BreakalegCompiler.Run(code, "r", new Context()));
+        }
+
+        [TestMethod]
+        public void TestMethod_Prototype()
+        {
+            var code = @"
+                function Person(){
+                    this.Name='zacaro';
+                    this.Age= :123;
+                }
+                var p=new Person();
+                n=p.Name;
+                a=p.Age();
+                Person.prototype.What=:34;
+                var p2=new Person();
+                x=p2.What();
+                ";
+            Assert.AreEqual("zacaro", BreakalegCompiler.Run(code, "n", new Context()));
+            Assert.AreEqual(123, BreakalegCompiler.Run(code, "a", new Context()));
+            Assert.AreEqual(34, BreakalegCompiler.Run(code, "x", new Context()));
+        }
     }
 }
