@@ -13,6 +13,13 @@ namespace Breakaleg.Consoles
         public object window = new JSWindow();
         public object document = new JSDocument();
 
+        public object @this;
+
+        public JSNamespace()
+        {
+            @this = window;
+        }
+
         public class Date
         {
             public dynamic getTime()
@@ -37,9 +44,12 @@ namespace Breakaleg.Consoles
 
         public class Math
         {
+            public static dynamic PI { get { return System.Math.PI; } }
             public static dynamic sqrt(dynamic p) { return System.Math.Sqrt(p); }
             public static dynamic cos(dynamic p) { return System.Math.Cos(p); }
             public static dynamic sin(dynamic p) { return System.Math.Sin(p); }
+            public static dynamic abs(dynamic p) { return System.Math.Abs(p); }
+            public static dynamic round(dynamic p) { return System.Math.Round((double)p); }
         }
     }
 

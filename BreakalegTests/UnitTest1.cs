@@ -340,5 +340,11 @@ namespace Breakaleg.Tests
             Assert.AreEqual(123, JSCompiler.Run(code, "a", new NameContext()));
             Assert.AreEqual(34, JSCompiler.Run(code, "x", new NameContext()));
         }
+
+        [TestMethod]
+        public void TestMethod_ForEach()
+        {
+            Assert.AreEqual(7, Run("t=0;for(var n in [1,2,3])t+=n;", "t"));
+        }
     }
 }

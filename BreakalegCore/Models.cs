@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Reflection;
-using System.ComponentModel;
 
 namespace Breakaleg.Core.Models
 {
@@ -358,11 +357,12 @@ namespace Breakaleg.Core.Models
             var loopContext = context.NewChild();
             NameContext codeContext = null;
             var setInst = SetExpr.Eval(context);
-            var vals = setInst.GetInstanceList();
-            if (vals != null)
-                foreach (var v in vals)
+            var instList = setInst.GetInstanceList();
+            if (instList != null)
+                foreach (var inst in instList)
                     if (Code != null)
                     {
+                        loopContext.SetMember(VarName, inst);
                         if (codeContext == null)
                             codeContext = loopContext.NewChild();
                         var result = Code.Run(codeContext);
@@ -650,7 +650,7 @@ namespace Breakaleg.Core.Models
                     return member;
                 context = context.ParentContext;
             }
-            return null;
+            throw new Exception(string.Format("undefined '{0}'", Name));
         }
 
         public override void Update(NameContext context, Instance inst)
@@ -1033,6 +1033,10 @@ namespace Breakaleg.Core.Models
             if (FuncExpr is DotExpr)
             {
                 var dotExpr = FuncExpr as DotExpr;
+
+                if (dotExpr.MemberName == "getTime")
+                    ownerInst = null;///x
+
                 dotExpr.GetMethod(context, out ownerInst, out funcInst);
             }
             else
