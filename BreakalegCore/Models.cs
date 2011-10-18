@@ -6,172 +6,6 @@ using System.Reflection;
 
 namespace Breakaleg.Core.Models
 {
-    public abstract class DynamicRecord
-    {
-        protected Dictionary<object, Instance> members;
-
-        public virtual Instance GetMember(object name)
-        {
-            if (members == null)
-                return null;
-            Instance member;
-            members.TryGetValue(name, out member);
-            return member;
-        }
-
-        public virtual void SetMember(object name, Instance inst)
-        {
-            if (members == null)
-                members = new Dictionary<object, Instance>();
-            members[name] = inst;
-        }
-
-        public bool DeleteMember(object name)
-        {
-            if (members != null)
-                return members.Remove(name);
-            else
-                return false;
-        }
-
-        public void AddValue(string name, dynamic value)
-        {
-            SetMember(name, new Instance { ScalarValue = value });
-        }
-
-        public void Assign(Instance from)
-        {
-            if (from.members != null && from.members.Count > 0)
-            {
-                if (this.members == null)
-                    this.members = new Dictionary<object, Instance>();
-                foreach (var m in from.members)
-                    this.members.Add(m.Key, m.Value);
-                ///TODO os valores copiados, se sofrerem alteracao, refletem no prototype de volta?
-            }
-        }
-
-        public Instance[] GetInstanceList()
-        {
-            if (members == null)
-                return null;
-            var mar = members.ToArray();
-            var insts = new Instance[mar.Length];
-            for (var i = 0; i < mar.Length; i++)
-                insts[i] = mar[i].Value;
-            return insts;
-        }
-
-        protected bool SetObjectMember(object obj, string name, Instance inst)
-        {
-            Type objType;
-            if (obj is ExternalClass)
-                objType = (obj as ExternalClass).TypeRef;
-            else
-                objType = obj.GetType();
-            var memberInfo = objType.GetMember(name).FirstOrDefault();
-            if (memberInfo == null)
-                return false;
-            if (memberInfo is PropertyInfo)
-                (memberInfo as PropertyInfo).SetValue(obj, inst.ScalarValue, null);
-            else if (memberInfo is FieldInfo)
-                (memberInfo as FieldInfo).SetValue(obj, inst.ScalarValue);
-            else if (memberInfo is MethodInfo)
-                throw new Exception("readonly");
-            else if (memberInfo is Type)
-                throw new Exception("readonly");
-            else
-                return false;
-            return true;
-        }
-
-        protected Instance GetObjectMember(object obj, string name)
-        {
-            Type objType;
-            if (obj is ExternalClass)
-                objType = (obj as ExternalClass).TypeRef;
-            else
-                objType = obj.GetType();
-            var memberInfo = objType.GetMember(name).FirstOrDefault();
-            if (memberInfo == null)
-                return null;
-            dynamic memberValue = null;
-            if (memberInfo is PropertyInfo)
-                memberValue = (memberInfo as PropertyInfo).GetValue(obj, null);
-            else if (memberInfo is FieldInfo)
-                memberValue = (memberInfo as FieldInfo).GetValue(obj);
-            else if (memberInfo is MethodInfo)
-                memberValue = new ExternalFunction(obj, memberInfo as MethodInfo);
-            else if (memberInfo is Type)
-                memberValue = new ExternalClass(memberInfo as Type);
-            else
-                return null;
-            return new Instance { ScalarValue = memberValue };
-        }
-    }
-
-    public class NameContext : DynamicRecord
-    {
-        public NameContext ParentContext;
-
-        public NameContext NewChild()
-        {
-            return new NameContext { ParentContext = this };
-        }
-
-        protected List<object> namespaces;
-        public void AddNamespace(object ns)
-        {
-            if (namespaces == null)
-                namespaces = new List<object>();
-            namespaces.Add(ns);
-        }
-
-        public override Instance GetMember(object name)
-        {
-            return base.GetMember(name) ?? FindNamespace(name);
-        }
-
-        private Instance FindNamespace(object name)
-        {
-            if (name is string && namespaces != null)
-                foreach (var ns in namespaces)
-                {
-                    var inst = GetObjectMember(ns, (string)name);
-                    if (inst != null)
-                        return inst;
-                }
-            return null;
-        }
-    }
-
-    public class Instance : DynamicRecord
-    {
-        public dynamic ScalarValue;
-        public NameContext Context;
-
-        public override string ToString()
-        {
-            return ScalarValue ?? "(null)";
-        }
-
-        public override Instance GetMember(object name)
-        {
-            var member = base.GetMember(name);
-            if (member == null && name is string && ScalarValue != null)
-                member = GetObjectMember(ScalarValue, (string)name);
-            return member;
-        }
-
-        public override void SetMember(object name, Instance inst)
-        {
-            if (name is string && ScalarValue != null)
-                if (SetObjectMember(ScalarValue, (string)name, inst))
-                    return;
-            base.SetMember(name, inst);
-        }
-    }
-
     public enum ExitMode { Normal, Break, Return, Continue, Except }
     public class ExitResult
     {
@@ -357,7 +191,7 @@ namespace Breakaleg.Core.Models
             var loopContext = context.NewChild();
             NameContext codeContext = null;
             var setInst = SetExpr.Eval(context);
-            var instList = setInst.GetInstanceList();
+            var instList = setInst.GetMembers();
             if (instList != null)
                 foreach (var inst in instList)
                     if (Code != null)
@@ -457,7 +291,7 @@ namespace Breakaleg.Core.Models
         public bool Match(NameContext context, Instance switchValue)
         {
             var caseValue = Test.Eval(context);
-            return caseValue.ScalarValue == switchValue.ScalarValue;
+            return caseValue.Scalar == switchValue.Scalar;
         }
 
         public override ExitResult Run(NameContext context)
@@ -488,15 +322,15 @@ namespace Breakaleg.Core.Models
 
         public override ExitResult Run(NameContext context)
         {
-            var selfInst = new Instance { ScalarValue = this, Context = context };
+            var selfInst = new Instance(this, context);
             selfInst.SetMember("prototype", new Instance());
-            selfInst.SetMember("length", new Instance { ScalarValue = Params != null ? Params.Length : 0 });
-            selfInst.SetMember("constructor", new Instance { ScalarValue = Code });///TODO eh isso?
+            selfInst.SetMember("length", new Instance(Params != null ? Params.Length : 0, null));
+            selfInst.SetMember("constructor", new Instance(Code, null));///TODO eh isso?
             context.SetMember(this.Name, selfInst);
             return null;
         }
 
-        public virtual ExitResult Call(NameContext context, Instance owner, Instance[] args)
+        public ExitResult Call(NameContext context, Instance owner, Instance[] args)
         {
             // nesse callContext serao guardados os parametros e o simbolo this=owner
             var callContext = context.NewChild();
@@ -506,54 +340,6 @@ namespace Breakaleg.Core.Models
             if (owner != null)
                 callContext.SetMember("this", owner);
             return Code.Run(callContext);
-        }
-    }
-
-    public class ExternalFunction : FunctionCode
-    {
-        private object target;
-        private MethodInfo method;
-        public ExternalFunction(object target, MethodInfo method)
-        {
-            this.target = target;
-            this.method = method;
-        }
-
-        public override ExitResult Run(NameContext context) { return null; }
-        public override ExitResult Call(NameContext context, Instance owner, Instance[] args)
-        {
-            object[] argvals = null;
-            if (args != null)
-            {
-                argvals = new object[args.Length];
-                for (var i = 0; i < args.Length; i++)
-                    argvals[i] = args[i].ScalarValue;
-            }
-            var ret = method.Invoke(target, argvals);
-            return new ExitResult { ExitMode = ExitMode.Normal, ExitValue = new Instance { ScalarValue = ret } };
-        }
-    }
-
-    public class ExternalClass : FunctionCode
-    {
-        public Type TypeRef;
-        public ExternalClass(Type typeRef)
-        {
-            this.TypeRef = typeRef;
-        }
-
-        public override ExitResult Run(NameContext context) { return null; }
-        public override ExitResult Call(NameContext context, Instance owner, Instance[] args)
-        {
-            object[] argvals = null;
-            if (args != null)
-            {
-                argvals = new object[args.Length];
-                for (var i = 0; i < args.Length; i++)
-                    argvals[i] = args[i].ScalarValue;
-            }
-            var ret = Activator.CreateInstance(TypeRef, argvals, null);
-            return new ExitResult { ExitMode = ExitMode.Normal, ExitValue = new Instance { ScalarValue = ret } };
         }
     }
 
@@ -592,15 +378,10 @@ namespace Breakaleg.Core.Models
 
     public abstract class ExprPiece
     {
-        protected bool callable = false;
-        public bool IsCallable { get { return callable; } }
-
         public dynamic EvalScalar(NameContext context)
         {
             var inst = Eval(context);
-            if (inst != null)
-                return inst.ScalarValue;
-            return null;
+            return inst != null ? inst.Scalar : null;
         }
 
         public bool EvalBool(NameContext context)
@@ -608,7 +389,7 @@ namespace Breakaleg.Core.Models
             var inst = Eval(context);
             if (inst == null)
                 return false;
-            var v = inst.ScalarValue;
+            var v = inst.Scalar;
             if (v == null)
                 return false;
             if (v is string)
@@ -628,7 +409,7 @@ namespace Breakaleg.Core.Models
         public dynamic Literal;
         public override Instance Eval(NameContext context)
         {
-            return new Instance { ScalarValue = this.Literal };
+            return new Instance(this.Literal, null);
         }
 
         public override string ToString()
@@ -683,7 +464,7 @@ namespace Breakaleg.Core.Models
 
         public override Instance Eval(NameContext context)
         {
-            return new Instance { ScalarValue = Function, Context = context };
+            return new Instance(Function, context);
         }
 
         public override string ToString()
@@ -698,17 +479,17 @@ namespace Breakaleg.Core.Models
 
         public override Instance Eval(NameContext context)
         {
-            var inst = new Instance();
+            var inst = new Instance(null, null);
             var len = Items != null ? Items.Length : 0;
             for (int i = 0; i < len; i++)
                 inst.SetMember(i, Items[i].Eval(context));
-            inst.SetMember("length", new Instance { ScalarValue = len });
+            inst.SetMember("length", new Instance(len, null));
             return inst;
         }
 
         public override string ToString()
         {
-            return "{...}";
+            return "[...]";
         }
     }
 
@@ -775,7 +556,7 @@ namespace Breakaleg.Core.Models
             var leftValue = LeftArg.EvalScalar(context);
             var rightValue = RightArg.EvalScalar(context);
             var retValue = ComputeBinary(leftValue, rightValue);
-            return new Instance { ScalarValue = retValue };
+            return new Instance(retValue, null);
         }
         protected abstract dynamic ComputeBinary(dynamic leftValue, dynamic rightValue);
     }
@@ -891,9 +672,8 @@ namespace Breakaleg.Core.Models
         protected override dynamic ComputeBinary(dynamic leftValue, dynamic rightValue) { return leftValue ^ rightValue; }
     }
 
-    public class ParensExpr : ExprPiece
+    public class ParensExpr : ExprPiece, ICallable
     {
-        public ParensExpr() : base() { callable = true; }
         public ExprPiece InnerExpr;
         public override Instance Eval(NameContext context) { return InnerExpr.Eval(context); }
     }
@@ -916,10 +696,8 @@ namespace Breakaleg.Core.Models
         }
     }
 
-    public class NewExpr : ExprPiece
+    public class NewExpr : ExprPiece, ICallable
     {
-        public NewExpr() : base() { callable = true; }
-
         public ExprPiece Creator;
 
         public override Instance Eval(NameContext context)
@@ -940,12 +718,7 @@ namespace Breakaleg.Core.Models
             else
                 funcExpr = Creator;
             var funcEval = funcExpr.Eval(context);
-            var funcRef = (FunctionCode)funcEval.ScalarValue;
-            var retInst = new Instance();
-            var protoInst = funcEval.GetMember("prototype");
-            if (protoInst != null)
-                retInst.Assign(protoInst);
-            funcRef.Call(funcEval.Context, retInst, args);
+            var retInst = funcEval.CreateNew(funcEval.ParentContext, args);
             return retInst;
         }
     }
@@ -960,8 +733,8 @@ namespace Breakaleg.Core.Models
             bool updateArg;
             var retValue = ComputeUnary(ref argValue, out updateArg);
             if (updateArg)
-                Arg.Update(context, new Instance { ScalarValue = argValue });
-            return new Instance { ScalarValue = retValue };
+                Arg.Update(context, new Instance(argValue, null));
+            return new Instance(retValue, null);
         }
         protected abstract dynamic ComputeUnary(ref dynamic value, out bool updateArg);
     }
@@ -986,10 +759,7 @@ namespace Breakaleg.Core.Models
         protected override dynamic ComputeUnary(ref dynamic value, out bool updateArg) { updateArg = false; return -value; }
     }
 
-    public abstract class SelfOpExpr : UnaryExpr
-    {
-        public SelfOpExpr() : base() { callable = true; }
-    }
+    public abstract class SelfOpExpr : UnaryExpr, ICallable { }
 
     public class PreIncExpr : SelfOpExpr
     {
@@ -1011,32 +781,28 @@ namespace Breakaleg.Core.Models
         protected override dynamic ComputeUnary(ref dynamic value, out bool updateArg) { updateArg = true; return value--; }
     }
 
-    public class ParamsExpr : ExprPiece
+    public class ParamsExpr : ExprPiece, ICallable
     {
-        public ParamsExpr() : base() { callable = true; }
-
         public ExprPiece FuncExpr;
         public ExprPiece[] Params;
 
+        public Instance[] ToInstances(NameContext context)
+        {
+            if (Params == null)
+                return null;
+            var instances = new Instance[Params.Length];
+            for (var i = 0; i < Params.Length; i++)
+                instances[i] = Params[i].Eval(context);
+            return instances;
+        }
+
         public override Instance Eval(NameContext context)
         {
-            Instance[] args = null;
-            if (Params != null)
-            {
-                args = new Instance[Params.Length];
-                for (var i = 0; i < Params.Length; i++)
-                    args[i] = Params[i].Eval(context);
-            }
-
             // se for uma expressao no formato obj.proc(), o obj serah o "this" no contexto
             Instance ownerInst, funcInst;
             if (FuncExpr is DotExpr)
             {
                 var dotExpr = FuncExpr as DotExpr;
-
-                if (dotExpr.MemberName == "getTime")
-                    ownerInst = null;///x
-
                 dotExpr.GetMethod(context, out ownerInst, out funcInst);
             }
             else
@@ -1044,9 +810,9 @@ namespace Breakaleg.Core.Models
                 ownerInst = null;
                 funcInst = FuncExpr.Eval(context);
             }
-            var funcRef = (FunctionCode)funcInst.ScalarValue;
-            var retInst = funcRef.Call(funcInst.Context, ownerInst, args);
-            return retInst != null ? retInst.ExitValue : null;
+            var args = ToInstances(context);
+            var ret = funcInst.Execute(context, ownerInst, args);
+            return ret != null ? ret.ExitValue : null;
         }
     }
 
@@ -1057,7 +823,7 @@ namespace Breakaleg.Core.Models
         public override Instance Eval(NameContext context)
         {
             var obj = (object)Expr.EvalScalar(context);
-            return new Instance { ScalarValue = obj.GetType() };
+            return new Instance(obj.GetType(), null);
         }
     }
 
@@ -1069,10 +835,8 @@ namespace Breakaleg.Core.Models
         }
     }
 
-    public class AssignExpr : BinaryExpr
+    public class AssignExpr : BinaryExpr, ICallable
     {
-        public AssignExpr() : base() { callable = true; }
-
         public override Instance Eval(NameContext context)
         {
             var rightInst = RightArg.Eval(context);
@@ -1087,16 +851,14 @@ namespace Breakaleg.Core.Models
         }
     }
 
-    public abstract class SelfAssign : BinaryExpr
+    public abstract class SelfAssign : BinaryExpr, ICallable
     {
-        public SelfAssign() : base() { callable = true; }
-
         public override Instance Eval(NameContext context)
         {
             var leftValue = LeftArg.EvalScalar(context);
             var rightValue = RightArg.EvalScalar(context);
             var retValue = ComputeBinary(leftValue, rightValue);
-            var retInst = new Instance { ScalarValue = retValue };
+            var retInst = new Instance(retValue, null);
             LeftArg.Update(context, retInst);
             return retInst;
         }
@@ -1181,7 +943,7 @@ namespace Breakaleg.Core.Models
                 retValue = Then.EvalScalar(context);
             else
                 retValue = Else.EvalScalar(context);
-            return new Instance { ScalarValue = retValue };
+            return new Instance(retValue, null);
         }
     }
 }

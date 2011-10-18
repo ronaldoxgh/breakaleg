@@ -64,6 +64,6 @@ function finish()
 
     location = "results.html?" + encodeURI(outputString);
 }
-
+alert('Hello World!');
 start();///
 while(reallyNext());///

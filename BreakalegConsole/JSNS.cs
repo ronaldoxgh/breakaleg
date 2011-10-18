@@ -5,6 +5,7 @@ using System.Text;
 
 using Breakaleg.Core.Compilers;
 using Breakaleg.Core.Models;
+using System.IO;
 
 namespace Breakaleg.Consoles
 {
@@ -12,7 +13,6 @@ namespace Breakaleg.Consoles
     {
         public object window = new JSWindow();
         public object document = new JSDocument();
-
         public object @this;
 
         public JSNamespace()
@@ -22,9 +22,20 @@ namespace Breakaleg.Consoles
 
         public class Date
         {
+            private DateTime value;
+            public Date()
+            {
+                this.value = DateTime.Now;
+            }
+
             public dynamic getTime()
             {
-                return new Date();
+                return this;
+            }
+
+            public static int operator -(Date d1, Date d2)
+            {
+                return (int)(d1.value - d2.value).TotalMilliseconds;
             }
         }
 
@@ -40,6 +51,11 @@ namespace Breakaleg.Consoles
         {
             public String() { }
             public String(dynamic arg) { }
+
+            public static string Unboxing(dynamic arg)
+            {
+                return arg.ToString();
+            }
         }
 
         public class Math
@@ -56,11 +72,31 @@ namespace Breakaleg.Consoles
     public class JSWindow
     {
         public void setTimeout(dynamic proc, dynamic delay) { }
+
+        public static void alert(dynamic msg)
+        {
+            Console.WriteLine("==============");
+            Console.WriteLine(msg);
+            Console.WriteLine("==============");
+        }
     }
 
     public class HTMLDiv
     {
-        public string innerHTML;
+        private string _innerHTML;
+        public string innerHTML
+        {
+            get { return _innerHTML; }
+            set
+            {
+                /*if (_innerHTML == null)
+                    Console.Write(value);
+                else if (value.IndexOf(_innerHTML) == 0)
+                    Console.Write(value.Substring(_innerHTML.Length));*/
+                _innerHTML = value;
+                Console.Write(value);
+            }
+        }
     }
 
     public class JSDocument
@@ -96,9 +132,14 @@ namespace Breakaleg.Consoles
                 i = s.IndexOf(">", p + 1) + 1;
             }
 
+            File.AppendAllText(@"c:\temp\jsns.txt", sb.ToString());///x
+
+            ///Console.Write(sb.ToString());///x
+
             var t = new JSCompiler().Parse(sb.ToString());
             var cx = new NameContext();
-            cx.AddNamespace(new JSNamespace());
+            cx.UseNS(new JSNamespace());
+            cx.UseNS(new JSWindow());
             t.Run(cx);
         }
     }

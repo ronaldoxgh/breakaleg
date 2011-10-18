@@ -28,7 +28,7 @@ namespace Breakaleg.Tests
             if (ret != null)
             {
                 var a = ctx.GetMember(ret);
-                return a != null ? a.ScalarValue : null;
+                return a != null ? a.Scalar : null;
             }
             return null;
         }
@@ -200,9 +200,9 @@ namespace Breakaleg.Tests
             string code = @"
                 function Pessoa()
                 {
-                    var nome='dexter';
+                    var anome='dexter';
                     this.GetConst=function(){return 123};
-                    this.GetNome=function(){return nome};
+                    this.GetNome=function(){return anome};
                 };
                 var p=new Pessoa();
                 r1=p.GetConst();
@@ -264,12 +264,12 @@ namespace Breakaleg.Tests
             public int a;
             public int b;
 
-            public void alert(dynamic s)
+            public static void alert(dynamic s)
             {
                 Console.WriteLine(s);
             }
 
-            public dynamic Soma(dynamic p1, dynamic p2)
+            public static dynamic Soma(dynamic p1, dynamic p2)
             {
                 return p1 + p2;
             }
@@ -284,7 +284,7 @@ namespace Breakaleg.Tests
                 x=Soma(4,5);
                 ";
             var ctx = new NameContext();
-            ctx.AddNamespace(new JSNS { a = 10, b = 30 });
+            ctx.UseNS(new JSNS { a = 10, b = 30 });
             var ret = JSCompiler.Run(code, "r", ctx);
             Assert.AreEqual(100, ret);
             ret = JSCompiler.Run(code, "x", ctx);
@@ -344,7 +344,7 @@ namespace Breakaleg.Tests
         [TestMethod]
         public void TestMethod_ForEach()
         {
-            Assert.AreEqual(7, Run("t=0;for(var n in [1,2,3])t+=n;", "t"));
+            Assert.AreEqual(9, Run("t=0;for(var n in [1,2,3])t+=n;", "t"));
         }
     }
 }

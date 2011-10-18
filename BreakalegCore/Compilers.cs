@@ -60,7 +60,7 @@ namespace Breakaleg.Core.Compilers
             if (eval != null)
             {
                 var a = context.GetMember(eval);
-                return a != null ? a.ScalarValue : null;
+                return a != null ? a.Scalar : null;
             }
             return null;
         }
@@ -138,7 +138,7 @@ namespace Breakaleg.Core.Compilers
             var saved = p.Position;
             if (ReadValue(p, out value))
             {
-                if (value.IsCallable)
+                if (value is ICallable)
                 {
                     AddCode(ref block, new CallCode { Arg = value });
                     return true;

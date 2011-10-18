@@ -133,8 +133,6 @@ namespace Breakaleg.Core.Readers
                             sb.Append(ch);
                             ThisCharNoSkip('\n');
                         }
-                        else if (ch == '\n' || ch == '"' || ch == '\\')
-                            sb.Append(ch);
                         else
                             sb.Append(ch);
                     }

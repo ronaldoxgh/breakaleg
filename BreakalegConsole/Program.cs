@@ -22,7 +22,8 @@ namespace Breakaleg.Consoles
 
             var t = c.Parse(contents + prefix + run);
             var cx = new NameContext();
-            cx.AddNamespace(new JSNamespace());
+            cx.UseNS(new JSNamespace());
+            cx.UseNS(new JSWindow());
             t.Run(cx);
 
             var tc = cx.GetMember("testContents");
