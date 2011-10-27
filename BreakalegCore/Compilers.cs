@@ -1,5 +1,4 @@
 ﻿///TODO ternary conditional op "?:"
-///TODO for...in...
 
 using System;
 using System.Collections.Generic;
@@ -59,7 +58,7 @@ namespace Breakaleg.Core.Compilers
             var exitState = byteCode.Run(context);
             if (eval != null)
             {
-                var a = context.GetMember(eval);
+                var a = context.GetField(eval);
                 return a != null ? a.Scalar : null;
             }
             return null;
@@ -776,7 +775,7 @@ namespace Breakaleg.Core.Compilers
             FunctionCode funcRead;
             if (ReadFunctionBody(p, false, out funcRead) || ReadClosure(p, out funcRead))
             {
-                value = new FunctionExpr { Function = funcRead };
+                value = new ClosureExpr { Function = funcRead };
                 return true;
             }
             value = null;

@@ -7,6 +7,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 using Breakaleg.Core.Compilers;
 using Breakaleg.Core.Models;
+using System.Threading;
 
 namespace Breakaleg.Tests
 {
@@ -23,11 +24,11 @@ namespace Breakaleg.Tests
         {
             var p = new JSCompiler();
             var c = p.Parse(code);
-            var ctx = new NameContext();
-            c.Run(ctx);
+            var ctx = new JSNames();
+            ctx.Run(c);
             if (ret != null)
             {
-                var a = ctx.GetMember(ret);
+                var a = ctx.GetField(ret);
                 return a != null ? a.Scalar : null;
             }
             return null;
@@ -259,34 +260,23 @@ namespace Breakaleg.Tests
             Assert.AreEqual("mary", Run(code, "r2b"));
         }
 
-        class JSNS
-        {
-            public int a;
-            public int b;
-
-            public static void alert(dynamic s)
-            {
-                Console.WriteLine(s);
-            }
-
-            public static dynamic Soma(dynamic p1, dynamic p2)
-            {
-                return p1 + p2;
-            }
-        }
-
         [TestMethod]
         public void TestMethod_SolveExternal()
         {
             var code = @"
                 r=a+b*3;
-                alert(r);
+                alert(r+1);
                 x=Soma(4,5);
                 ";
-            var ctx = new NameContext();
-            ctx.UseNS(new JSNS { a = 10, b = 30 });
+            dynamic foo = null;
+            var ctx = new JSNames();
+            ctx.SetMethod("alert", (s, a) => { foo = a[0].Scalar; return null; });
+            ctx.SetField("a", new Instance(10));
+            ctx.SetField("b", new Instance(30));
+            ctx.SetMethod("Soma", (i, a) => a[0] + a[1]);
             var ret = JSCompiler.Run(code, "r", ctx);
             Assert.AreEqual(100, ret);
+            Assert.AreEqual(101, foo);
             ret = JSCompiler.Run(code, "x", ctx);
             Assert.AreEqual(9, ret);
         }
@@ -345,6 +335,20 @@ namespace Breakaleg.Tests
         public void TestMethod_ForEach()
         {
             Assert.AreEqual(9, Run("t=0;for(var n in [1,2,3])t+=n;", "t"));
+        }
+
+        [TestMethod]
+        public void TestMethod_Math()
+        {
+            Assert.AreEqual(13, Run("a=Math.round(13.2)", "a"));
+        }
+
+        [TestMethod]
+        public void TestMethod_String()
+        {
+            Assert.AreEqual("abc", Run("s=new String('abc')", "s"));
+            Assert.AreEqual("b", Run("s=new String('abc').charAt(1)", "s"));
+            Assert.AreEqual("b", Run("s='abc'.charAt(1)", "s"));
         }
     }
 }

@@ -14,6 +14,11 @@ namespace Breakaleg.Consoles
     {
         static void Main(string[] args)
         {
+            TestSunSpider();
+        }
+
+        static void TestSunSpider()
+        {
             var contents = File.ReadAllText(@"c:\projetos\breakaleg\sunspider\sunspider-test-contents.js");
             var prefix = File.ReadAllText(@"c:\projetos\breakaleg\sunspider\sunspider-test-prefix.js");
             var run = File.ReadAllText(@"c:\projetos\breakaleg\sunspider\sunspider-test-run.js");
@@ -21,14 +26,12 @@ namespace Breakaleg.Consoles
             var c = new JSCompiler();
 
             var t = c.Parse(contents + prefix + run);
-            var cx = new NameContext();
-            cx.UseNS(new JSNamespace());
-            cx.UseNS(new JSWindow());
+            var cx = new JSNames();
             t.Run(cx);
 
-            var tc = cx.GetMember("testContents");
-            var ts = cx.GetMember("tests");
-            var ca = cx.GetMember("categories");
+            var tc = cx.GetField("testContents");
+            var ts = cx.GetField("tests");
+            var ca = cx.GetField("categories");
 
             Console.Write(tc + " " + ts + " " + ca);
         }

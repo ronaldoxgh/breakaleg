@@ -3,208 +3,123 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Reflection;
+using System.Threading;
 
 namespace Breakaleg.Core.Models
 {
+    public delegate Instance NativeCodeCallback(Instance self, params Instance[] args);
+
     public abstract class DynamicRecord
     {
-        protected Dictionary<object, Instance> members;
+        protected Dictionary<object, Instance> fields;
 
-        protected virtual object GetValue() { return null; }
-
-        public virtual Instance GetMember(object name)
+        public void ShareFieldsWith(DynamicRecord recTo)
         {
-            if (members != null)
-            {
-                Instance member;
-                members.TryGetValue(name, out member);
-                if (member != null)
-                    return member;
-            }
+            if (this.fields == null)
+                this.fields = new Dictionary<object, Instance>();
+            recTo.fields = this.fields;
+        }
 
-            var oInst = GetValue();
-            if (oInst == null)
+        public virtual Instance GetField(object name)
+        {
+            Instance f;
+            if (fields != null && fields.TryGetValue(name, out f))
+                return f;
+            return null;
+        }
+
+        public Instance SetField(object name, Instance inst)
+        {
+            (fields ?? (fields = new Dictionary<object, Instance>()))[name] = inst;
+            return inst;
+        }
+
+        public bool DeleteField(object name)
+        {
+            return fields != null ? fields.Remove(name) : false;
+        }
+
+        public Instance SetMethod(object name, NativeCodeCallback nativeCode)
+        {
+            return SetField(name, new Instance { Prototype = new Instance { Code = new FunctionCode(nativeCode) } });
+        }
+
+        public Instance[] GetFields()
+        {
+            if (fields == null)
                 return null;
-
-            var oType = (oInst is Type) ? (Type)oInst : oInst.GetType();
-            var self = (oInst is Type) ? null : oInst;
-            if (name is string)
-            {
-                var mInfo = oType.GetMember((string)name).FirstOrDefault();
-                if (mInfo == null)
-                    return null;
-                dynamic mValue = null;
-                if (mInfo is PropertyInfo)
-                    mValue = (mInfo as PropertyInfo).GetValue(self, null);
-                else if (mInfo is FieldInfo)
-                    mValue = (mInfo as FieldInfo).GetValue(self);
-                else if (mInfo is MethodInfo)
-                    mValue = mInfo;
-                else if (mInfo is Type)
-                    mValue = mInfo;
-                else
-                    throw new Exception("not a valid member");
-                return new Instance(mValue, null);
-            }
-            else if (name.GetType().IsAssignableFrom(typeof(int)))
-            {
-                return null;///TODO
-            }
-            else
-                throw new Exception("not a valid member");
-        }
-
-        public void SetMember(object name, Instance inst)
-        {
-            Instance foo;
-            if (members != null && members.TryGetValue(name, out foo))
-            {
-                members[name] = inst;
-                return;
-            }
-            var oInst = GetValue();
-            if (oInst != null)
-            {
-                var oType = (oInst is Type) ? (Type)oInst : oInst.GetType();
-                var self = (oInst is Type) ? null : oInst;
-                if (name is string)
-                {
-                    var mInfo = oType.GetMember((string)name).FirstOrDefault();
-                    if (mInfo != null)
-                    {
-                        if (mInfo is PropertyInfo)
-                        {
-                            (mInfo as PropertyInfo).SetValue(self, inst.Scalar, null);
-                            return;
-                        }
-                        else if (mInfo is FieldInfo)
-                        {
-                            (mInfo as FieldInfo).SetValue(self, inst.Scalar);
-                            return;
-                        }
-                        else if (mInfo is MethodInfo)
-                            throw new Exception("readonly");
-                        else if (mInfo is Type)
-                            throw new Exception("readonly");
-                    }
-                }
-                else if (name.GetType().IsAssignableFrom(typeof(int)))
-                {
-                    var mInfo = oType.GetDefaultMembers().FirstOrDefault();
-                }
-            }
-            (members ?? (members = new Dictionary<object, Instance>()))[name] = inst;
-        }
-
-        public bool DeleteMember(object name)
-        {
-            return members != null ? members.Remove(name) : false;
-        }
-
-        public Instance[] GetMembers()
-        {
-            if (members == null)
-                return null;
-            var memberArray = members.ToArray();
-            var instArray = new Instance[memberArray.Length];
-            for (var i = 0; i < memberArray.Length; i++)
-                instArray[i] = memberArray[i].Value;
+            var fieldArray = fields.ToArray();
+            var instArray = new Instance[fieldArray.Length];
+            for (var i = 0; i < fieldArray.Length; i++)
+                instArray[i] = fieldArray[i].Value;
             return instArray;
-        }
-
-        public void CopyMembers(Instance from)
-        {
-            if (from != null && from.members != null && from.members.Count > 0)
-            {
-                if (this.members == null)
-                    this.members = new Dictionary<object, Instance>();
-                foreach (var m in from.members)
-                    this.members.Add(m.Key, m.Value);
-                ///TODO os valores copiados, se sofrerem alteracao, refletem no prototype de volta?
-            }
         }
     }
 
     public class Instance : DynamicRecord
     {
-        private dynamic scalar;
-        private NameContext parentContext;
+        // prototipo do meu tipo se eu for uma variavel
+        private Instance baseType;
+        public Instance BaseType { get { return GetBaseType(); } set { this.baseType = value; } }
 
-        public dynamic Scalar { get { return this.scalar; } }
-        public NameContext ParentContext { get { return this.parentContext; } }
+        private Instance GetBaseType()
+        {
+            if (baseType == null && Scalar != null)
+            {
+                baseType = JSNames.Running.GetPrototype(Scalar.GetType());
+                if (baseType == null)
+                    throw new Exception("lib not loaded");
+            }
+            return baseType;
+        }
 
-        protected override object GetValue() { return this.scalar; }
+        public Instance Prototype; // meu proprio prototipo se eu for uma funcao
+        public NameContext CodeContext; // contexto da funcao
+        public FunctionCode Code; // codigo de inicializacao se eu for um construtor; ou codigo da funcao
+        public dynamic Scalar;
+        public Type[] NativeTypes;
 
         public Instance() { }
-        public Instance(dynamic scalar, NameContext parentContext)
+        public Instance(dynamic scalar)
         {
-            this.scalar = scalar;
-            this.parentContext = parentContext;
+            this.Scalar = scalar;
         }
 
-        public Instance CreateNew(NameContext context, Instance[] args)
+        public override Instance GetField(object name)
         {
-            if (this.scalar is Type)
-            {
-                var scalarType = this.scalar as Type;
-                var scalarArgs = ToScalars(args);
-                var obj = Activator.CreateInstance(scalarType, scalarArgs, null);
-                return new Instance(obj, null);
-            }
-            else if (this.scalar is FunctionCode)
-            {
-                var instance = new Instance(null, context);
-                var prototype = this.GetMember("prototype");
-                if (prototype != null)
-                    instance.CopyMembers(prototype);
-                Execute(this.parentContext, instance, args);
-                return instance;
-            }
-            else
-                throw new Exception("not a class to create");
+            var f = base.GetField(name);
+            if (f == null && name is string)
+                // o unico cara q tem a prop prototype eh uma funcao (ex.: Pessoa.prototype)
+                if ((string)name == "prototype")
+                    f = this.Prototype;
+                else if (this.BaseType != null)
+                    f = this.BaseType.GetField(name);
+            return f;
         }
 
-        public ExitResult Execute(NameContext context, Instance owner, Instance[] args)
+        public static Instance DefineType(FunctionCode constructor, NameContext typecontext, params Type[] nativeTypes)
         {
-            if (this.scalar is MethodInfo)
+            return new Instance
             {
-                var proc = this.scalar as MethodInfo;
-                var scalarArgs = ToScalars(args);
-                var instance = owner != null ? (object)owner.Scalar : null;
-                var ret = proc.Invoke(instance, scalarArgs);
-                return new ExitResult { ExitMode = ExitMode.Normal, ExitValue = new Instance(ret, null) };
-            }
-            else if (this.scalar is FunctionCode)
-            {
-                var proc = this.scalar as FunctionCode;
-                // nesse callContext serao guardados os parametros e o simbolo this=owner
-                var callContext = this.ParentContext.NewChild();
-                if (proc.Params != null)
-                    for (var i = 0; i < proc.Params.Length; i++)
-                        callContext.SetMember(proc.Params[i], args != null && i < args.Length ? args[i] : null);
-                if (owner != null)
-                    callContext.SetMember("this", owner);
-                return proc.Code.Run(callContext);
-            }
-            else if (this.scalar is Type)
-            {
-                if (args != null && args.Length > 0)
+                Prototype = new Instance
                 {
-                    var proc = (this.scalar as Type).GetMethod("Unboxing");
-                    if (proc == null)
-                        throw new Exception("no castfrom method");
-                    var scalarArgs = ToScalars(args);
-                    var ret = proc.Invoke(null, scalarArgs);
-                    return new ExitResult { ExitMode = ExitMode.Normal, ExitValue = new Instance(ret, null) };
+                    Code = constructor,
+                    CodeContext = typecontext,
+                    NativeTypes = nativeTypes,
                 }
-                else
-                {
-                    var inst = CreateNew(context, args);
-                    return new ExitResult { ExitMode = ExitMode.Normal, ExitValue = inst };
-                }
-            }
-            else
-                throw new Exception("not a method to call");
+            };
+        }
+
+        public Instance New(Instance[] args)
+        {
+            var inst = new Instance { BaseType = this };
+            Code.Call(this.CodeContext, inst, args);
+            return inst;
+        }
+
+        public ExitResult Run(Instance owner, Instance[] args)
+        {
+            return Code.Call(this.CodeContext, owner, args);
         }
 
         public override string ToString()
@@ -212,16 +127,10 @@ namespace Breakaleg.Core.Models
             return Scalar != null ? Scalar.ToString() : "null";
         }
 
-        private object[] ToScalars(Instance[] args)
-        {
-            if (args == null)
-                return null;
-            var scalarArgs = new object[args.Length];
-            for (var i = 0; i < args.Length; i++)
-                scalarArgs[i] = args[i].Scalar;
-            return scalarArgs;
-        }
-
+        public static Instance operator +(Instance a, Instance b) { return new Instance(a.Scalar + b.Scalar); }
+        public static Instance operator -(Instance a, Instance b) { return new Instance(a.Scalar - b.Scalar); }
+        public static Instance operator *(Instance a, Instance b) { return new Instance(a.Scalar * b.Scalar); }
+        public static Instance operator /(Instance a, Instance b) { return new Instance(a.Scalar / b.Scalar); }
     }
 
     public interface ICallable { }
@@ -236,29 +145,147 @@ namespace Breakaleg.Core.Models
             return new NameContext { parentContext = this };
         }
 
-        protected List<Instance> nsList;
-
-        public void UseNS(object ns)
+        public Instance GetFieldUpwards(object name)
         {
-            (nsList ?? (nsList = new List<Instance>())).Add(new Instance(ns, null));
-        }
-
-        public override Instance GetMember(object name)
-        {
-            var member = base.GetMember(name);
-            return member ?? ScanNSList(name);
-        }
-
-        private Instance ScanNSList(object name)
-        {
-            if (name is string && nsList != null)
-                foreach (var ns in nsList)
-                {
-                    var inst = ns.GetMember(name);
-                    if (inst != null)
-                        return inst;
-                }
+            var temp = this;
+            while (temp != null)
+            {
+                var field = temp.GetField(name);
+                if (field != null)
+                    return field;
+                temp = temp.ParentContext;
+            }
             return null;
+        }
+
+        public void SetFieldUpwards(object name, Instance inst)
+        {
+            // o ultimo contexto recebe todas as variaveis sem dono (equiv.: dhtml.window)
+            NameContext defaultContext = null;
+            var temp = this;
+            while (temp != null)
+            {
+                if (temp.GetField(name) != null)
+                {
+                    temp.SetField(name, inst);
+                    return;
+                }
+                defaultContext = temp;
+                temp = temp.ParentContext;
+            }
+            if (defaultContext != null)
+                defaultContext.SetField(name, inst);
+        }
+    }
+
+    public class JSNames : NameContext
+    {
+        public JSNames()
+            : base()
+        {
+            var win = new Instance();
+            win.ShareFieldsWith(this);
+            SetField("this", win);
+            SetField("window", win);
+            SetField("Math", NewMathType());
+            SetField("String", NewStringType());
+            SetField("Array", NewArrayType());
+            SetField("Date", NewDateType());
+            SetField("Object", NewObjectType());
+        }
+
+        private static ThreadLocal<JSNames> running = new ThreadLocal<JSNames>();
+        public static JSNames Running { get { return running.Value; } }
+
+        public ExitResult Run(CodePiece code)
+        {
+            ExitResult result = null;
+            running.Value = this;
+            try
+            {
+                result = code.Run(this);
+            }
+            finally
+            {
+                running.Value = null;
+            }
+            return result;
+        }
+
+        private Instance NewMathType()
+        {
+
+            // math nao tem prototype
+            var math = new Instance();
+            math.SetField("PI", new Instance(Math.PI));
+            math.SetMethod("sqrt", (s, a) => new Instance(Math.Sqrt((double)a[0].Scalar)));
+            math.SetMethod("cos", (s, a) => new Instance(Math.Cos((double)a[0].Scalar)));
+            math.SetMethod("sin", (s, a) => new Instance(Math.Sin((double)a[0].Scalar)));
+            math.SetMethod("abs", (s, a) => new Instance(Math.Abs((double)a[0].Scalar)));
+            math.SetMethod("round", (s, a) => new Instance(Math.Round((double)a[0].Scalar)));
+            math.SetMethod("max", (s, a) => new Instance(Math.Max(a[0].Scalar, a[1].Scalar)));
+            return math;
+        }
+
+        private Instance NewStringType()
+        {
+            var st = Instance.DefineType(new FunctionCode((i, a) =>
+            {
+                if (i == null)
+                    i = new Instance();
+                if (a != null && a.Length > 0)
+                    i.Scalar = string.Format("{0}", a.First());
+                return i;
+            }), null, typeof(String));
+            st.Prototype.SetField("length", null);/// i => new Instance(i.Scalar.Length, null), null);
+            st.Prototype.SetMethod("charAt", (s, a) => new Instance(s.Scalar.Substring(a[0].Scalar, 1)));
+            return st;
+        }
+
+        private Instance NewObjectType()
+        {
+            return Instance.DefineType(new FunctionCode((i, a) => { i.Scalar = null; return i; }), null);
+        }
+
+        private Instance NewDateType()
+        {
+            var dt = Instance.DefineType(new FunctionCode((i, a) => { i.Scalar = new DateTime(); return i; }), null, typeof(DateTime));
+            dt.Prototype.SetMethod("getTime", DateGetTimeFunc);
+            return dt;
+        }
+
+        private static Instance DateGetTimeFunc(Instance self, params Instance[] args)
+        {
+            return new Instance((long)(self.Scalar - new DateTime(1970, 1, 1)).TotalMilliseconds);
+        }
+
+        private Instance NewArrayType()
+        {
+            var ar = Instance.DefineType(new FunctionCode(CreateArrayFunc), null);
+            ar.SetField("length", null);///i => new Instance(i.MaxIndex + 1, null), null);
+            return ar;
+        }
+
+        private static Instance CreateArrayFunc(Instance self, Instance[] args)
+        {
+            if (self == null)
+                self = new Instance();
+            var arglen = args != null ? args.Length : 0;
+            if (arglen == 1)
+                ;///self.MaxIndex = (int)(args.First().Scalar) - 1;
+            else if (arglen > 1)
+                for (var n = 0; n < arglen; n++)
+                    self.SetField(n, args[n]);
+            return self;
+        }
+
+        public Instance GetPrototype(Type type)
+        {
+            var inst = fields.FirstOrDefault(f =>
+                f.Value.Prototype != null &&
+                f.Value.Prototype.NativeTypes != null &&
+                f.Value.Prototype.NativeTypes.Contains(type)).Value;
+            return inst != null ? inst.Prototype : null;
         }
     }
 }
