@@ -1,10 +1,11 @@
 
 /TestResults
-/BreakalegConsole/obj
-/BreakalegConsole/bin
-/BreakalegCore/bin
-/BreakalegCore/obj
-/BreakalegTests/bin
-/BreakalegTests/obj
+/Breakaleg.Console/obj
+/Breakaleg.Console/bin
+/Breakaleg.Core/bin
+/Breakaleg.Core/obj
+/Breakaleg.Tests/bin
+/Breakaleg.Tests/obj
 /Local.testsettings
 *.testsettings
+/_ReSharper.Breakaleg/

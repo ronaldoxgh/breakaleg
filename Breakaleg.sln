@@ -1,10 +1,6 @@
 ﻿
-Microsoft Visual Studio Solution File, Format Version 11.00
-# Visual Studio 2010
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BreakalegConsole", "BreakalegConsole\BreakalegConsole.csproj", "{DC29ED2E-A884-4F7C-BC80-356B0C7CBAB3}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BreakalegTests", "BreakalegTests\BreakalegTests.csproj", "{BCCB83BB-6D25-4B90-8C45-77E0B0F86A41}"
-EndProject
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2012
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{4EDCC309-B00C-4231-A3C4-D322F720A25E}"
 	ProjectSection(SolutionItems) = preProject
 		Breakaleg.vsmdi = Breakaleg.vsmdi
@@ -12,7 +8,11 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		TraceAndTestImpact.testsettings = TraceAndTestImpact.testsettings
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BreakalegCore", "BreakalegCore\BreakalegCore.csproj", "{070C7140-DC5A-448B-B881-D679B2F80D5B}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Breakaleg.Core", "Breakaleg.Core\Breakaleg.Core.csproj", "{070C7140-DC5A-448B-B881-D679B2F80D5B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Breakaleg.Console", "Breakaleg.Console\Breakaleg.Console.csproj", "{DC29ED2E-A884-4F7C-BC80-356B0C7CBAB3}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Breakaleg.Tests", "Breakaleg.Tests\Breakaleg.Tests.csproj", "{BCCB83BB-6D25-4B90-8C45-77E0B0F86A41}"
 EndProject
 Global
 	GlobalSection(TestCaseManagementSettings) = postSolution
@@ -27,6 +27,16 @@ Global
 		Release|x86 = Release|x86
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{070C7140-DC5A-448B-B881-D679B2F80D5B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{070C7140-DC5A-448B-B881-D679B2F80D5B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{070C7140-DC5A-448B-B881-D679B2F80D5B}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{070C7140-DC5A-448B-B881-D679B2F80D5B}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{070C7140-DC5A-448B-B881-D679B2F80D5B}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{070C7140-DC5A-448B-B881-D679B2F80D5B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{070C7140-DC5A-448B-B881-D679B2F80D5B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{070C7140-DC5A-448B-B881-D679B2F80D5B}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{070C7140-DC5A-448B-B881-D679B2F80D5B}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{070C7140-DC5A-448B-B881-D679B2F80D5B}.Release|x86.ActiveCfg = Release|Any CPU
 		{DC29ED2E-A884-4F7C-BC80-356B0C7CBAB3}.Debug|Any CPU.ActiveCfg = Debug|x86
 		{DC29ED2E-A884-4F7C-BC80-356B0C7CBAB3}.Debug|Mixed Platforms.ActiveCfg = Debug|x86
 		{DC29ED2E-A884-4F7C-BC80-356B0C7CBAB3}.Debug|Mixed Platforms.Build.0 = Debug|x86
@@ -47,16 +57,6 @@ Global
 		{BCCB83BB-6D25-4B90-8C45-77E0B0F86A41}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
 		{BCCB83BB-6D25-4B90-8C45-77E0B0F86A41}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{BCCB83BB-6D25-4B90-8C45-77E0B0F86A41}.Release|x86.ActiveCfg = Release|Any CPU
-		{070C7140-DC5A-448B-B881-D679B2F80D5B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{070C7140-DC5A-448B-B881-D679B2F80D5B}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{070C7140-DC5A-448B-B881-D679B2F80D5B}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
-		{070C7140-DC5A-448B-B881-D679B2F80D5B}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
-		{070C7140-DC5A-448B-B881-D679B2F80D5B}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{070C7140-DC5A-448B-B881-D679B2F80D5B}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{070C7140-DC5A-448B-B881-D679B2F80D5B}.Release|Any CPU.Build.0 = Release|Any CPU
-		{070C7140-DC5A-448B-B881-D679B2F80D5B}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
-		{070C7140-DC5A-448B-B881-D679B2F80D5B}.Release|Mixed Platforms.Build.0 = Release|Any CPU
-		{070C7140-DC5A-448B-B881-D679B2F80D5B}.Release|x86.ActiveCfg = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

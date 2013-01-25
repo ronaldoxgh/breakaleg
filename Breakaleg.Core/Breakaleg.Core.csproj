@@ -1,0 +1,143 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProductVersion>8.0.30703</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{070C7140-DC5A-448B-B881-D679B2F80D5B}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>Breakaleg.Core</RootNamespace>
+    <AssemblyName>Breakaleg.Core</AssemblyName>
+    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Compiler\JSReader.cs" />
+    <Compile Include="Compiler\StringReader.cs" />
+    <Compile Include="Compiler\TextPosition.cs" />
+    <Compile Include="Dynamic\JSNames.cs" />
+    <Compile Include="Dynamic\NameContext.cs" />
+    <Compile Include="Dynamic\Instance.cs" />
+    <Compile Include="Dynamic\DynamicRecord.cs" />
+    <Compile Include="Models\ArrayExpr.cs" />
+    <Compile Include="Models\AssignExpr.cs" />
+    <Compile Include="Models\BinaryExpr.cs" />
+    <Compile Include="Models\BitAndExpr.cs" />
+    <Compile Include="Models\BitNotExpr.cs" />
+    <Compile Include="Models\BitOrExpr.cs" />
+    <Compile Include="Models\BitXorExpr.cs" />
+    <Compile Include="Models\BoolAndExpr.cs" />
+    <Compile Include="Models\BoolNotExpr.cs" />
+    <Compile Include="Models\BoolOrExpr.cs" />
+    <Compile Include="Models\BreakCode.cs" />
+    <Compile Include="Models\CallCode.cs" />
+    <Compile Include="Models\ClosureExpr.cs" />
+    <Compile Include="Models\CodeBlock.cs" />
+    <Compile Include="Models\CodePiece.cs" />
+    <Compile Include="Models\ConditionalExpr.cs" />
+    <Compile Include="Models\ContinueCode.cs" />
+    <Compile Include="Models\DeleteCode.cs" />
+    <Compile Include="Models\DivideExpr.cs" />
+    <Compile Include="Models\DotExpr.cs" />
+    <Compile Include="Models\EqExpr.cs" />
+    <Compile Include="Models\ExactEqExpr.cs" />
+    <Compile Include="Models\ExitResult.cs" />
+    <Compile Include="Models\ExprPiece.cs" />
+    <Compile Include="Models\ForCode.cs" />
+    <Compile Include="Models\ForeachCode.cs" />
+    <Compile Include="Models\FunctionCode.cs" />
+    <Compile Include="Models\GtEqExpr.cs" />
+    <Compile Include="Models\GtExpr.cs" />
+    <Compile Include="Models\IfCode.cs" />
+    <Compile Include="Models\IndexExpr.cs" />
+    <Compile Include="Models\InstanceOfExpr.cs" />
+    <Compile Include="Models\LiteralConst.cs" />
+    <Compile Include="Models\LtEqExpr.cs" />
+    <Compile Include="Models\LtExpr.cs" />
+    <Compile Include="Compiler\JSCompiler.cs" />
+    <Compile Include="Models\ModulusExpr.cs" />
+    <Compile Include="Models\MultiplyExpr.cs" />
+    <Compile Include="Models\NamedExpr.cs" />
+    <Compile Include="Models\NegExpr.cs" />
+    <Compile Include="Models\NewExpr.cs" />
+    <Compile Include="Models\NotEqExpr.cs" />
+    <Compile Include="Models\NotExactEqExpr.cs" />
+    <Compile Include="Models\ObjectExpr.cs" />
+    <Compile Include="Models\OperationExpr.cs" />
+    <Compile Include="Models\ParamsExpr.cs" />
+    <Compile Include="Models\ParensExpr.cs" />
+    <Compile Include="Models\PlusExpr.cs" />
+    <Compile Include="Models\PosDecExpr.cs" />
+    <Compile Include="Models\PosIncExpr.cs" />
+    <Compile Include="Models\PreDecExpr.cs" />
+    <Compile Include="Models\PreIncExpr.cs" />
+    <Compile Include="Models\ReturnCode.cs" />
+    <Compile Include="Models\SelfAssign.cs" />
+    <Compile Include="Models\SelfBitAndExpr.cs" />
+    <Compile Include="Models\SelfBitOrExpr.cs" />
+    <Compile Include="Models\SelfBitXorExpr.cs" />
+    <Compile Include="Models\SelfBoolAndExpr.cs" />
+    <Compile Include="Models\SelfBoolOrExpr.cs" />
+    <Compile Include="Models\SelfDivideExpr.cs" />
+    <Compile Include="Models\SelfModulusExpr.cs" />
+    <Compile Include="Models\SelfMultiplyExpr.cs" />
+    <Compile Include="Models\SelfOpExpr.cs" />
+    <Compile Include="Models\SelfShlExpr.cs" />
+    <Compile Include="Models\SelfShrExExpr.cs" />
+    <Compile Include="Models\SelfShrExpr.cs" />
+    <Compile Include="Models\SelfSubtractExpr.cs" />
+    <Compile Include="Models\SelfSumExpr.cs" />
+    <Compile Include="Models\ShlExpr.cs" />
+    <Compile Include="Models\ShrExExpr.cs" />
+    <Compile Include="Models\ShrExpr.cs" />
+    <Compile Include="Models\SimpleBinaryExpr.cs" />
+    <Compile Include="Models\SubtractExpr.cs" />
+    <Compile Include="Models\SumExpr.cs" />
+    <Compile Include="Models\SwitchCaseCode.cs" />
+    <Compile Include="Models\SwitchCode.cs" />
+    <Compile Include="Models\ThrowCode.cs" />
+    <Compile Include="Models\TryCode.cs" />
+    <Compile Include="Models\TypeOfExpr.cs" />
+    <Compile Include="Models\UnaryExpr.cs" />
+    <Compile Include="Models\UntilCode.cs" />
+    <Compile Include="Models\VarCode.cs" />
+    <Compile Include="Models\WhileCode.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>
